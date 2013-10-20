@@ -6,6 +6,22 @@
 	objectVersion = 46;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		4284F83518146DD2008D3B8C /* pwnat2 */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 4284F83618146DD2008D3B8C /* Build configuration list for PBXAggregateTarget "pwnat2" */;
+			buildPhases = (
+			);
+			dependencies = (
+				4284F83A18146DD8008D3B8C /* PBXTargetDependency */,
+				4284F83C18146DD8008D3B8C /* PBXTargetDependency */,
+				4284F83E18146DD8008D3B8C /* PBXTargetDependency */,
+			);
+			name = pwnat2;
+			productName = pwnat2;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		4291AF8918138C87003F8680 /* common.c in Sources */ = {isa = PBXBuildFile; fileRef = 4291AF8818138C87003F8680 /* common.c */; };
 		4291AF8A18138C8D003F8680 /* common.c in Sources */ = {isa = PBXBuildFile; fileRef = 4291AF8818138C87003F8680 /* common.c */; };
@@ -25,6 +41,30 @@
 		42B8EA76180F6A6D0032EA4B /* libpcap.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 42B8EA74180F6A5C0032EA4B /* libpcap.dylib */; };
 		42B8EA77180F6A6D0032EA4B /* libsqlite3.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 42B8EA6F180F6A2B0032EA4B /* libsqlite3.0.dylib */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		4284F83918146DD8008D3B8C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 42701A89180F3B7800DD33BC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42B8EA41180F3CAA0032EA4B;
+			remoteInfo = server;
+		};
+		4284F83B18146DD8008D3B8C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 42701A89180F3B7800DD33BC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42B8EA4E180F3CB30032EA4B;
+			remoteInfo = provider;
+		};
+		4284F83D18146DD8008D3B8C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 42701A89180F3B7800DD33BC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 42B8EA5B180F3CB70032EA4B;
+			remoteInfo = consumer;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		42B8EA40180F3CAA0032EA4B /* CopyFiles */ = {
@@ -265,6 +305,7 @@
 				42B8EA41180F3CAA0032EA4B /* server */,
 				42B8EA4E180F3CB30032EA4B /* provider */,
 				42B8EA5B180F3CB70032EA4B /* consumer */,
+				4284F83518146DD2008D3B8C /* pwnat2 */,
 			);
 		};
 /* End PBXProject section */
@@ -302,6 +343,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		4284F83A18146DD8008D3B8C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42B8EA41180F3CAA0032EA4B /* server */;
+			targetProxy = 4284F83918146DD8008D3B8C /* PBXContainerItemProxy */;
+		};
+		4284F83C18146DD8008D3B8C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42B8EA4E180F3CB30032EA4B /* provider */;
+			targetProxy = 4284F83B18146DD8008D3B8C /* PBXContainerItemProxy */;
+		};
+		4284F83E18146DD8008D3B8C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 42B8EA5B180F3CB70032EA4B /* consumer */;
+			targetProxy = 4284F83D18146DD8008D3B8C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		42701A98180F3B7800DD33BC /* Debug */ = {
@@ -374,6 +433,20 @@
 			};
 			name = Release;
 		};
+		4284F83718146DD2008D3B8C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		4284F83818146DD2008D3B8C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		42B8EA49180F3CAA0032EA4B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -439,6 +512,14 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
+		};
+		4284F83618146DD2008D3B8C /* Build configuration list for PBXAggregateTarget "pwnat2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4284F83718146DD2008D3B8C /* Debug */,
+				4284F83818146DD2008D3B8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
 		};
 		42B8EA48180F3CAA0032EA4B /* Build configuration list for PBXNativeTarget "server" */ = {
 			isa = XCConfigurationList;
