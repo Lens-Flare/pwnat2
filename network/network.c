@@ -8,7 +8,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <netdb.h>
 
 #include "network.h"
 
@@ -28,11 +27,11 @@ void hton_addr(struct _pk_address * addr) {
 }
 
 void hton_str(struct _pk_string * str) {
-	str->len = htonl(str->len);
+	str->length = htonl(str->length);
 }
 
 void hton_pk(pk_keepalive_t * pk) {
-	pk->type = htonl(pk->type);
+	pk->netver = htonl(pk->netver);
 	pk->size = htonl(pk->size);
 	
 	switch (pk->type) {
@@ -64,12 +63,12 @@ void ntoh_addr(struct _pk_address * addr) {
 }
 
 void ntoh_str(struct _pk_string * str) {
-	str->len = htonl(str->len);
+	str->length = ntohs(str->length);
 }
 
 void ntoh_pk(pk_keepalive_t * pk) {
-	pk->type = htonl(pk->type);
-	pk->size = htonl(pk->size);
+	pk->netver = ntohs(pk->netver);
+	pk->size = ntohs(pk->size);
 	
 	switch (pk->type) {
 		case PK_KEEPALIVE:

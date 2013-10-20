@@ -9,7 +9,8 @@
 #ifndef pwnat2_network_h
 #define pwnat2_network_h
 
-#include <sys/types.h>
+#include <stdint.h>
+#include <netdb.h>
 
 #define PK_KEEPALIVE	0
 #define PK_ADVERTIZE	1
@@ -28,31 +29,33 @@ struct _pk_address {
 
 // a string
 struct _pk_string {
-	uint32_t len; // the number of bytes
-	uint8_t data[]; // the bytes
+	uint32_t length; // number of bytes
+	uint8_t data[]; // bytes
 };
 
 // a keepalive packet - PK_KEEPALIVE
 struct pk_keepalive {
-	uint32_t type; // the packet type
-	uint32_t size; // the packet sizeå
+	uint8_t version[4]; // software version
+	uint32_t netver; // network structure version
+	uint8_t type; // packet type
+	uint32_t size; // packet size
 };
 
 // a service advertizing packet - PK_ADVERTIZE
 struct pk_advertize {
 	struct pk_keepalive _super;
-	uint16_t port;
-	uint32_t reserved;
-	struct _pk_string name;
+	uint16_t port; // port number
+	uint32_t reserved; // reserved - for future use
+	struct _pk_string name; // service name
 };
 
 // a service info response packet - PK_SERVICE
 struct pk_service {
 	struct pk_keepalive _super;
-	struct _pk_address address;
-	uint16_t port;
-	uint32_t reserved;
-	struct _pk_string name;
+	struct _pk_address address; // host address
+	uint16_t port; // port number
+	uint32_t reserved; // reserved - for future use
+	struct _pk_string name; // service name
 };
 
 // a service info request packet - PK_REQUEST
