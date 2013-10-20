@@ -16,12 +16,17 @@
 #include "network.h"
 #include "common.h"
 
-#pragma mark Packet Network/Host-form Conversion
+#pragma mark Packet Transmission/Reception
 
-void hton_addr(struct _pk_address * addr) {
+ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags) {
+	return send(sockfd, pk, pk->size, flags);
+}
+
+static void hton_addr(struct _pk_address * addr) {
 	for (int i = 0; i < 4; i++)
 		addr->data[i] = htonl(addr->data[i]);
 }
+
 void hton_pk(pk_keepalive_t * pk) {
 	pk->netver = htonl(pk->netver);
 	
@@ -43,7 +48,11 @@ void hton_pk(pk_keepalive_t * pk) {
 	}
 }
 
-void ntoh_addr(struct _pk_address * addr) {
+ssize_t pk_recv(int sockfd, char buf[UINT8_MAX + 1], int flags) {
+	return recv(sockfd, buf, UINT8_MAX + 1, flags);
+}
+
+static void ntoh_addr(struct _pk_address * addr) {
 	for (int i = 0; i < 4; i++)
 		addr->data[i] = ntohl(addr->data[i]);
 }

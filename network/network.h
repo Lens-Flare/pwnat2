@@ -78,7 +78,9 @@ typedef struct pk_advertize pk_advertize_t;
 typedef struct pk_response pk_response_t;
 typedef struct pk_service pk_service_t;
 
+ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags);
 void hton_pk(pk_keepalive_t * pk);
+ssize_t pk_recv(int sockfd, char buf[UINT8_MAX + 1], int flags);
 void ntoh_pk(pk_keepalive_t * pk);
 
 int open_socket(char * hostname, char * servname, int * sockfd);
