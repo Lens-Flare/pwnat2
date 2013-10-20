@@ -6,14 +6,14 @@
 //  Copyright (c) 2013 Ethan. All rights reserved.
 //
 
-#include <unistd.h>
 #include <stdio.h>
 
+#include "server.h"
 #include "../network/network.h"
 
 int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd) {
 	int retv = 0;
-	char buf[256];
+	char buf[PACKET_SIZE_MAX];
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
 	close(sockfd);
@@ -106,27 +106,24 @@ int do_listener(int sockfd) {
 	while (1) {
 		if ((acptfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen)) < 0) {
 			perror("accept");
-			continue;
+			return 0;
 		}
 		
 		fork_handler(sockfd, addr, addrlen, acptfd);
 		close(acptfd);
 	}
+	
+	return 0;
 }
 
 int fork_listener(const char * port, int backlog, pid_t * cpid) {
 	int sockfd;
 	
-	if (!open_socket(NULL, (char *)port, &sockfd)) {
+	if (listen_socket(NULL, (char *)port, backlog, &sockfd)) {
 		return 1;
 	}
 	
-	if (listen(sockfd, backlog) == -1) {
-		perror("listen");
-		return 1;
-	}
-	
-	if (!(*cpid = fork()))
+	if (cpid == NULL || !(*cpid = fork()))
 		do_listener(sockfd);
 	
 	return 0;

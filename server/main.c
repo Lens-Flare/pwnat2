@@ -8,14 +8,12 @@
 
 #include <stdio.h>
 
+#include "server.h"
 #include "../network/network.h"
 
 int main(int argc, const char * argv[])
 {
-
-	// insert code here...
-//	printf("%lu\n", sizeof(advertize_service_t));
-//	printf("%lu\n", sizeof(service_info_t));
+	fork_listener(SERVER_PORT, 10, NULL);
 	
 	return 0;
 }

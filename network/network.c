@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #include "network.h"
 
@@ -118,7 +119,7 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int open_socket(const char * hostname, const char * servname, int * sockfd) {
+int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd) {
 	int retv, yes;
 	struct addrinfo hints, *servinfo, *p;
 	
@@ -127,12 +128,16 @@ int open_socket(const char * hostname, const char * servname, int * sockfd) {
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	
-	if (!(retv = getaddrinfo(hostname, servname, &hints, &servinfo))) {
+	if ((retv = getaddrinfo(hostname, servname, &hints, &servinfo))) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retv));
 		return 1;
 	}
 	
 	for (p = servinfo; p; p = p->ai_next) {
+		char s[INET6_ADDRSTRLEN];
+		inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
+		printf("binding to %s\n", s);
+		
 		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			perror("server: socket");
 			continue;
@@ -159,13 +164,62 @@ int open_socket(const char * hostname, const char * servname, int * sockfd) {
 	
 	freeaddrinfo(servinfo);
 	
+	if (listen(*sockfd, backlog) == -1) {
+		close(*sockfd);
+		perror("listen");
+		return 1;
+	}
+	
+	return 0;
+}
+
+int connect_socket(const char * hostname, const char * servname, int * sockfd) {
+	int retv;
+	struct addrinfo hints, *servinfo, *p;
+	
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	
+	if ((retv = getaddrinfo(hostname, servname, &hints, &servinfo))) {
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retv));
+		return 1;
+	}
+	
+	for (p = servinfo; p; p = p->ai_next) {
+		char s[INET6_ADDRSTRLEN];
+		inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
+		printf("connecting to %s\n", s);
+		
+		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
+			perror("server: socket");
+			continue;
+		}
+		
+        if (connect(*sockfd, p->ai_addr, p->ai_addrlen) < 0) {
+            close(*sockfd);
+            perror("client: connect");
+            continue;
+        }
+		
+		break;
+	}
+	
+	if (!p)  {
+		fprintf(stderr, "client: failed to connect\n");
+		return 2;
+	}
+	
+	freeaddrinfo(servinfo);
+	
 	return 0;
 }
 
 #pragma mark - Packet Struct Lifecycle
 
 pk_keepalive_t * alloc_packet(unsigned long size) {
-	if (size < PACKET_SIZE_MAX)
+	if (size > PACKET_SIZE_MAX)
 		return 0;
 	
 	pk_keepalive_t * pk = calloc(1, size);

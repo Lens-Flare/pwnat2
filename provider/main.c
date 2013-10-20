@@ -35,7 +35,7 @@ int main(int argc, const char * argv[]) {
 	char buf[256];
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
-	if ((retv = !open_socket(NULL, SERVER_PORT, &sockfd)))
+	if ((retv = connect_socket(NULL, SERVER_PORT, &sockfd)))
 		goto exit;
 	
 	if ((retv = send_handshake(sockfd)))

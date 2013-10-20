@@ -9,4 +9,8 @@
 #ifndef pwnat2_server_h
 #define pwnat2_server_h
 
+#include <unistd.h>
+
+int fork_listener(const char * port, int backlog, pid_t * cpid);
+
 #endif

@@ -132,7 +132,8 @@ void hton_pk(pk_keepalive_t * pk);
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags);
 void ntoh_pk(pk_keepalive_t * pk);
 
-int open_socket(const char * hostname, const char * servname, int * sockfd);
+int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd);
+int connect_socket(const char * hostname, const char * servname, int * sockfd);
 
 pk_keepalive_t * alloc_packet(unsigned long size);
 void init_packet(pk_keepalive_t * pk, pk_type_t type);

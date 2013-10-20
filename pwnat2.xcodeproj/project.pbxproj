@@ -100,6 +100,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4284F83F181480A4008D3B8C /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		4284F840181480A4008D3B8C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		4291AF87181379EF003F8680 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		4291AF8818138C87003F8680 /* common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = common.c; sourceTree = "<group>"; };
 		42B8EA42180F3CAA0032EA4B /* server */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = server; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -151,6 +153,8 @@
 		42701A88180F3B7800DD33BC = {
 			isa = PBXGroup;
 			children = (
+				4284F83F181480A4008D3B8C /* Makefile */,
+				4284F840181480A4008D3B8C /* README.md */,
 				42B8EA69180F44170032EA4B /* network */,
 				42701A93180F3B7800DD33BC /* common */,
 				42B8EA43180F3CAA0032EA4B /* server */,
@@ -520,6 +524,7 @@
 				4284F83818146DD2008D3B8C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		42B8EA48180F3CAA0032EA4B /* Build configuration list for PBXNativeTarget "server" */ = {
 			isa = XCConfigurationList;

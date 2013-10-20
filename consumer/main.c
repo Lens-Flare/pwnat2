@@ -43,7 +43,7 @@ int ask_server_for_services(pk_service_t ** srvs)
 	pk_keepalive_t * packet;
 	char buf[PACKET_SIZE_MAX];
 
-	ret = open_socket("computingeureka.com", SERVER_PORT, &sockfd);
+	ret = connect_socket("computingeureka.com", SERVER_PORT, &sockfd);
 	if(ret)
 	{
 		perror("consumer: open_socket");
