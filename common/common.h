@@ -19,7 +19,7 @@
 #define _perror()		perror(__FUNCTION__);
 
 
-enum boolean {TRUE = 1, FALSE = 0};
+typedef enum {TRUE = 1, FALSE = 0} boolean;
 typedef int errcode;
 
 void _sleep(int millis);
