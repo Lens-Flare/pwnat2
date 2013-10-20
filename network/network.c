@@ -172,7 +172,13 @@ void init_address(struct _pk_address * dest, struct in_addr * src) {
 void init_address6(struct _pk_address * dest, struct in6_addr * src) {
 	dest->family = AF_INET6;
 	for (int i = 0; i < 4; i++)
-		dest->data[i] = src->__u6_addr.__u6_addr32[i];
+		#ifdef __APPLE__
+			dest->data[i] = src->__u6_addr.__u6_addr32[i];
+		#elif __linux
+			dest->data[i] = src->__in6_u.__u6_addr32[i];
+		#else
+			; // TODO: put some windows BS here.
+		#endif
 }
 
 pk_keepalive_t * make_pk_keepalive(unsigned char type) {
