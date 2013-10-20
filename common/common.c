@@ -21,3 +21,9 @@ void _sleep(int millis)
                 usleep(1000*millis);
         #endif
 }
+
+int _fork(pid_t * cpid, int (*run)(void *), void * params) {
+	if (!(*cpid = fork()))
+		return (*run)(params);
+	return 0;
+}
