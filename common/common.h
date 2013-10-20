@@ -17,6 +17,6 @@
 #define SERVER_PORT		"45678"
 
 void _sleep(int millis);
-int _fork(pid_t * cpid, int (*run)(void *), void * params)
+int _fork(pid_t * cpid, int (*run)(void *), void * params);
 
 #endif
