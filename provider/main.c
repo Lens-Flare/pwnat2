@@ -21,22 +21,28 @@ int do_keepalive(void * param) {
 	pk_keepalive_t * pk = make_pk_keepalive(PK_KEEPALIVE);
 	
 	while (1) {
-		send(sockfd, pk, pk->size, 0);
+		pk_send(sockfd, pk, 0);
 		_sleep(5000);
 	}
 	
+exit:
+	close(sockfd);
 	return 0;
 }
 
 int main(int argc, const char * argv[]) {
 	pid_t keepalive_pid;
-	int sockfd;
+	int sockfd, retv = 0;
 	char buf[256];
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
 	if (!open_socket(NULL, SERVER_PORT, &sockfd)) {
 		return 1;
 	}
+	
+	pk_handshake_t * hs = make_pk_handshake(NULL);
+	
+	
 	
 	_fork(&keepalive_pid, &do_keepalive, &sockfd);
 	
@@ -59,19 +65,11 @@ int main(int argc, const char * argv[]) {
 		// pk == buf
 		pk_recv(sockfd, buf, 0);
 		
-		switch (pk->type) {
-			case PK_BADSWVER:
-				fprintf(stderr, "Incompatible software version (%d.%d-r%d.%d)", pk->version[0], pk->version[1], pk->version[2], pk->version[3]);
-				return 1;
-				break;
-			case PK_BADNETVER:
-				fprintf(stderr, "Incompatible network structure version (%d)", pk->netver);
-				return 1;
-				break;
-			default:
-				break;
-		}
+		if ((retv = check_ver(pk)))
+			goto exit;
 	}
 	
-	return 0;
+exit:
+	close(sockfd);
+	return retv;
 }

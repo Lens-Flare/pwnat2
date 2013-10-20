@@ -17,6 +17,6 @@ int main(int argc, const char * argv[])
 	printf("%lu\n", sizeof(advertize_service_t));
 	printf("%lu\n", sizeof(service_info_t));
 	
-    return 0;
+	return 0;
 }
 
