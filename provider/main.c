@@ -25,7 +25,6 @@ int do_keepalive(void * param) {
 		_sleep(5000);
 	}
 	
-exit:
 	close(sockfd);
 	return 0;
 }
