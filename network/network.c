@@ -165,7 +165,7 @@ pk_keepalive_t * alloc_packet(unsigned long size) {
 	
 	pk_keepalive_t * pk = calloc(1, size);
 	if (!pk) {
-		_perror();
+		perror("calloc");
 		return pk;
 	}
 	
