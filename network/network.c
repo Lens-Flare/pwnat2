@@ -33,7 +33,10 @@ ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags) {
 	hton_pk(pk);
 	retv = send(sockfd, pk, pk->size, flags);
 	ntoh_pk(pk);
-	if (retv >= 0 && retv != pk->size) {
+	
+	if (retv < 0) {
+		perror("send");
+	} else if (retv != pk->size) {
 		fprintf(stderr, "%zd bytes of %d bytes sent\n", retv, pk->size);
 		retv = -1;
 	}
@@ -68,18 +71,24 @@ void hton_pk(pk_keepalive_t * pk) {
 }
 
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
-	ssize_t retv;
+	ssize_t bytes = 0;
 	
-	if ((retv = recv(sockfd, buf, PACKET_SIZE_MAX, flags)) >= 0) {
+	for (buf[0] = 0; buf[0] != (char)PACKET_SIG && bytes >= 0;)
+		bytes = recv(sockfd, buf, PACKET_SIZE_MAX, flags);
+	
+	if (bytes < 0) {
+		perror("recv");
+	} else {
 		pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 		ntoh_pk(pk);
-		if (retv >= 0 && retv != pk->size) {
-			fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", retv, pk->size);
-			retv = -1;
+		
+		if (bytes != pk->size) {
+			fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
+			bytes = -1;
 		}
 	}
 	
-	return retv;
+	return bytes;
 }
 
 static void ntoh_addr(struct _pk_address * addr) {
@@ -234,6 +243,8 @@ pk_keepalive_t * alloc_packet(unsigned long size) {
 }
 
 void init_packet(pk_keepalive_t * pk, pk_type_t type) {
+	pk->signature = 0xB6;
+	
 	pk->version[0] = MAJOR_VERSION;
 	pk->version[1] = MINOR_VERSION;
 	pk->version[2] = REVISION;
@@ -416,46 +427,102 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 
 #pragma mark - Handshaking
 
-#define IF_GOTO_EXIT(check) if ((retv = check)) goto exit;
-
 errcode send_handshake(int sockfd) {
 	errcode retv = 0;
+	ssize_t bytes;
 	char buf[256];
 	pk_handshake_t * hs, * recv = (pk_handshake_t *)buf;
 	
-	IF_GOTO_EXIT(!(hs = make_pk_handshake(NULL)));
-	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
 	
-	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
-	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
-	IF_GOTO_EXIT(check_handshake(hs, recv));
 	
-	free(hs);
-	IF_GOTO_EXIT(!(hs = make_pk_handshake(recv)));
-	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
+	hs = make_pk_handshake(NULL);
+	if ((retv = !hs))
+		goto free;
 	
-exit:
+	bytes = pk_send(sockfd, (pk_keepalive_t *)hs, 0);
+	if ((retv = bytes < 0))
+		goto free;
+	
+	
+	
+	bytes = pk_recv(sockfd, buf, 0);
+	if ((retv = bytes < 0))
+		goto free;
+	
+	retv = check_version((pk_keepalive_t *)recv);
+	if (retv)
+		goto free;
+	
+	retv = check_handshake(hs, recv);
+	if (retv)
+		goto free;
+	
+	
+	
+	free_packet((pk_keepalive_t *)hs);
+	
+	hs = make_pk_handshake(NULL);
+	if ((retv = !hs))
+		goto free;
+	
+	bytes = pk_send(sockfd, (pk_keepalive_t *)hs, 0);
+	if ((retv = bytes < 0))
+		goto free;
+	
+	
+	
+free:
 	free_packet((pk_keepalive_t *)hs);
 	return retv;
 }
 
 errcode recv_handshake(int sockfd) {
 	errcode retv = 0;
+	ssize_t bytes;
 	char buf[256];
 	pk_handshake_t * hs = NULL, * recv = (pk_handshake_t *)buf;
 	
-	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
-	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
-	IF_GOTO_EXIT(check_handshake(hs, recv));
 	
-	IF_GOTO_EXIT(!(hs = make_pk_handshake(recv)));
-	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
 	
-	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
-	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
-	IF_GOTO_EXIT(check_handshake(hs, recv));
+	bytes = pk_recv(sockfd, buf, 0);
+	if ((retv = bytes < 0))
+		goto free;
 	
-exit:
+	retv = check_version((pk_keepalive_t *)recv);
+	if (retv)
+		goto free;
+	
+	retv = check_handshake(hs, recv);
+	if (retv)
+		goto free;
+	
+	
+	
+	hs = make_pk_handshake(NULL);
+	if ((retv = !hs))
+		goto free;
+	
+	bytes = pk_send(sockfd, (pk_keepalive_t *)hs, 0);
+	if ((retv = bytes < 0))
+		goto free;
+	
+	
+	
+	bytes = pk_recv(sockfd, buf, 0);
+	if ((retv = bytes < 0))
+		goto free;
+	
+	retv = check_version((pk_keepalive_t *)recv);
+	if (retv)
+		goto free;
+	
+	retv = check_handshake(hs, recv);
+	if (retv)
+		goto free;
+	
+	
+	
+free:
 	free_packet((pk_keepalive_t *)hs);
 	return retv;
 }

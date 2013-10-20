@@ -26,6 +26,7 @@
 #endif
 
 #define NET_VER			1
+#define PACKET_SIG		0xB6
 #define PACKET_SIZE_MAX	UINT8_MAX
 
 enum pk_type {
@@ -80,6 +81,7 @@ struct _pk_string {
 
 // a keepalive packet - PK_KEEPALIVE
 struct pk_keepalive {
+	uint8_t signature; // pwnat packet signature
 	uint8_t version[4]; // software version
 	uint32_t netver; // network structure version
 	uint8_t type; // packet type
