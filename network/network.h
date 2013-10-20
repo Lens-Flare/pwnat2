@@ -11,7 +11,7 @@
 
 #include <stdint.h>
 #include <netdb.h>
-#include "common.h"
+#include "../common/common.h"
 
 #ifdef __APPLE__
 	#include <CommonCrypto/CommonDigest.h>
