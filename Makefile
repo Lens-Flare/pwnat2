@@ -7,7 +7,7 @@ link_options = -lcrypto
 comp_options = -O2 --std=gnu11 -Wall -Wno-unknown-pragmas
 options = $(link_options) $(comp_options)
 
-.PHONY : all consumer server provider
+.PHONY : all consumer server provider clean
 all : $(builddir)/consumer $(builddir)/server $(builddir)/provider
 
 consumer : $(builddir)/consumer
@@ -23,22 +23,21 @@ $(builddir)/server : $(server_objs)
 $(builddir)/provider : $(provider_objs)
 	cc -o $(builddir)/provider $(provider_objs) $(options)
 
-$(builddir)/consumer-main.o : 
-	cc -o $(builddir)/consumer-main.o -c consumer/main.c $(comp_options)
-$(builddir)/network-network.o : 
-	cc -o $(builddir)/network-network.o -c network/network.c $(comp_options)
-$(builddir)/common-common.o : 
-	cc -o $(builddir)/common-common.o -c common/common.c $(comp_options)
-$(builddir)/provider-main.o : 
-	cc -o $(builddir)/provider-main.o -c provider/main.c $(comp_options)
-$(builddir)/server-listening.o : 
-	cc -o $(builddir)/server-listening.o -c server/listening.c $(comp_options)
-$(builddir)/server-main.o : 
-	cc -o $(builddir)/server-main.o -c server/main.c $(comp_options)
 
-install : 
+$(builddir)/network-%.o : network/%.c
+	cc -c $(comp_options) $< -o $@
+$(builddir)/common-%.o : common/%.c
+	cc -c $(comp_options) $< -o $@
 
-.PHONY : clean
+$(builddir)/consumer-%.o : consumer/%.c
+	cc -c $(comp_options) $< -o $@
+$(builddir)/server-%.o : server/%.c
+	cc -c $(comp_options) $< -o $@
+$(builddir)/provider-%.o : provider/%.c
+	cc -c $(comp_options) $< -o $@
+
+install : consumer server provider
+
 clean : 
 	-rm -f $(consumer_objs) $(server_objs) $(provider_objs) $(builddir)/consumer $(builddir)/server $(builddir)/provider
 
