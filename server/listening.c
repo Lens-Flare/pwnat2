@@ -60,14 +60,18 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				break;
 			
 			case PK_ADVERTIZE:
+				; pk_advertize_t * ad = (pk_advertize_t *)pk;
+				printf("Provider advertizing %s on %d\n", (char *)&ad->name.data, ad->port);
 				// update list
 				break;
 				
 			case PK_REQUEST:
+				printf("Client requesting services\n");
 				// send list
 				break;
 				
 			case PK_FORWARD:
+				printf("Client requesting packet forwarding\n");
 				// forward packet
 				break;
 				
