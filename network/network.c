@@ -16,6 +16,12 @@
 #include "network.h"
 #include "common.h"
 
+#ifdef __APPLE__
+	#define pk_hs_hash(dest, src) CC_SHA256(src, HANDSHAKE_SIZE, dest);
+#else
+	#define pk_hs_hash(dest, src) SHA256(src, HANDSHAKE_SIZE, dest);
+#endif
+
 #pragma mark Packet Transmission/Reception
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags) {
@@ -160,7 +166,7 @@ int open_socket(char * hostname, char * servname, int * sockfd) {
 #pragma mark - Packet Struct Lifecycle
 
 pk_keepalive_t * alloc_packet(unsigned long size) {
-	if (size < UINT8_MAX)
+	if (size < PACKET_SIZE_MAX)
 		return 0;
 	
 	pk_keepalive_t * pk = calloc(1, size);
@@ -228,6 +234,36 @@ pk_keepalive_t * make_pk_keepalive(pk_type_t type) {
 	return pk;
 }
 
+pk_handshake_t * make_pk_handshake(pk_handshake_t * recv) {
+	pk_handshake_t * hs = (pk_handshake_t *)alloc_packet(sizeof(pk_handshake_t));
+	if (!hs)
+		return hs;
+	
+	init_packet((pk_keepalive_t *)hs, PK_HANDSHAKE);
+	
+	if (!recv) {
+		hs->step = PK_HS_INITIAL;
+		_random(&hs->data, HANDSHAKE_SIZE);
+	} else {
+		switch (recv->step) {
+			case PK_HS_INITIAL:
+				hs->step = PK_HS_ACKNOWLEDGE;
+				break;
+			case PK_HS_ACKNOWLEDGE:
+				hs->step = PK_HS_FINAL;
+				break;
+			default:
+				free(hs);
+				return NULL;
+				break;
+		}
+		memcpy(&hs->data, &recv->hash, HANDSHAKE_SIZE);
+		pk_hs_hash((void *)&hs->hash, &hs->data);
+	}
+	
+	return hs;
+}
+
 pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	pk_advertize_t * ad = (pk_advertize_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
 	if (!ad)
@@ -277,7 +313,17 @@ pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, co
 	return serv;
 }
 
-
+int check_handshake(pk_handshake_t * recv) {
+	uint8_t check[HANDSHAKE_SIZE];
+	
+	pk_hs_hash(check, &recv->data);
+	
+	for (int i = 0; i < HANDSHAKE_SIZE; i++)
+		if (check[i] != recv->hash[i])
+			return 0;
+	
+	return 1;
+}
 
 
 

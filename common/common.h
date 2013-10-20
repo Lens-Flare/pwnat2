@@ -20,5 +20,6 @@
 #define _perror()		perror(__FUNCTION__);
 void _sleep(int millis);
 int _fork(pid_t * cpid, int (*run)(void *), void * params);
+int _random(void * data, size_t len);
 
 #endif
