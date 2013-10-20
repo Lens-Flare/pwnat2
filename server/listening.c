@@ -66,10 +66,3 @@ int listener(const char * port, int backlog, pid_t * cpid) {
 	
 	return 0;
 }
-
-void startListening() {
-	struct addrinfo hints;
-	
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = 
-}
