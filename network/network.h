@@ -33,7 +33,7 @@ struct _pk_address {
 // a string
 struct _pk_string {
 	uint32_t length; // number of bytes
-	uint8_t data[]; // bytes
+	uint8_t data[]; // bytes (null terminated)
 };
 
 // a keepalive packet - PK_KEEPALIVE
@@ -69,5 +69,6 @@ typedef struct pk_service pk_service_t;
 
 void hton_pk(pk_keepalive_t * pk);
 void ntoh_pk(pk_keepalive_t * pk);
+int open_socket(char * hostname, char * servname, int backlog, int * sockfd);
 
 #endif

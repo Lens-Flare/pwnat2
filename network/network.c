@@ -8,6 +8,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "network.h"
 
@@ -79,4 +83,48 @@ void ntoh_pk(pk_keepalive_t * pk) {
 		default:
 			break;
 	}
+}
+
+int open_socket(char * hostname, char * servname, int backlog, int * sockfd) {
+	int retv, yes;
+	struct addrinfo hints, *servinfo, *p;
+	
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	
+	if (!(retv = getaddrinfo(hostname, servname, &hints, &servinfo))) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retv));
+        return 1;
+	}
+	
+	for (p = servinfo; p; p = p->ai_next) {
+        if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
+            perror("server: socket");
+            continue;
+        }
+		
+        if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0) {
+            perror("setsockopt");
+            return 1;
+        }
+		
+        if (bind(*sockfd, p->ai_addr, p->ai_addrlen) < 0) {
+            close(*sockfd);
+            perror("server: bind");
+            continue;
+        }
+		
+        break;
+	}
+	
+    if (!p)  {
+        fprintf(stderr, "server: failed to bind\n");
+        return 2;
+    }
+	
+	freeaddrinfo(servinfo);
+	
+	return 0;
 }
