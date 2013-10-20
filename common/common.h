@@ -20,6 +20,7 @@
 
 
 enum boolean {TRUE = 1, FALSE = 0};
+typedef int errcode;
 
 void _sleep(int millis);
 int _fork(pid_t * cpid, int (*run)(void *), void * params);
