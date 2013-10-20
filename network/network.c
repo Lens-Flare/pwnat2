@@ -111,11 +111,11 @@ void ntoh_pk(pk_keepalive_t * pk) {
 
 void *get_in_addr(struct sockaddr *sa)
 {
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
 	
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
 int open_socket(char * hostname, char * servname, int * sockfd) {
@@ -128,34 +128,34 @@ int open_socket(char * hostname, char * servname, int * sockfd) {
 	hints.ai_flags = AI_PASSIVE;
 	
 	if (!(retv = getaddrinfo(hostname, servname, &hints, &servinfo))) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retv));
-        return 1;
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(retv));
+		return 1;
 	}
 	
 	for (p = servinfo; p; p = p->ai_next) {
-        if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
-            perror("server: socket");
-            continue;
-        }
+		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
+			perror("server: socket");
+			continue;
+		}
 		
-        if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0) {
-            perror("setsockopt");
-            return 1;
-        }
+		if (setsockopt(*sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) < 0) {
+			perror("setsockopt");
+			return 1;
+		}
 		
-        if (bind(*sockfd, p->ai_addr, p->ai_addrlen) < 0) {
-            close(*sockfd);
-            perror("server: bind");
-            continue;
-        }
+		if (bind(*sockfd, p->ai_addr, p->ai_addrlen) < 0) {
+			close(*sockfd);
+			perror("server: bind");
+			continue;
+		}
 		
-        break;
+		break;
 	}
 	
-    if (!p)  {
-        fprintf(stderr, "server: failed to bind\n");
-        return 2;
-    }
+	if (!p)  {
+		fprintf(stderr, "server: failed to bind\n");
+		return 2;
+	}
 	
 	freeaddrinfo(servinfo);
 	
@@ -405,7 +405,3 @@ exit:
 	free_packet((pk_keepalive_t *)hs);
 	return retv;
 }
-
-
-
-
