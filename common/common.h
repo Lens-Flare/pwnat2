@@ -16,6 +16,8 @@
 
 #define SERVER_PORT		"45678"
 
+
+#define _perror()		perror(__FUNCTION__);
 void _sleep(int millis);
 int _fork(pid_t * cpid, int (*run)(void *), void * params);
 
