@@ -16,11 +16,11 @@
 
 void _sleep(int millis)
 {
-        #ifdef WINDOWS
-                Sleep(millis);
-        #else
-                usleep(1000*millis);
-        #endif
+	#ifdef WINDOWS
+		Sleep(millis);
+	#else
+		usleep(1000*millis);
+	#endif
 }
 
 int _fork(pid_t * cpid, int (*run)(void *), void * params) {

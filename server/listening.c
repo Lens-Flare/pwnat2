@@ -15,10 +15,10 @@ int listener(const char * port, int backlog, pid_t * cpid) {
 		return 1;
 	}
 	
-    if (listen(sockfd, backlog) == -1) {
-        perror("listen");
+	if (listen(sockfd, backlog) == -1) {
+		perror("listen");
 		return 1;
-    }
+	}
 	
 	if (!(*cpid = fork()))
 		while (1) {

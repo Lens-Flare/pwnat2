@@ -36,13 +36,11 @@ int main(int argc, const char * argv[]) {
 	char buf[256];
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
-	if (!open_socket(NULL, SERVER_PORT, &sockfd)) {
-		return 1;
-	}
+	if ((retv = !open_socket(NULL, SERVER_PORT, &sockfd)))
+		goto exit;
 	
-	pk_handshake_t * hs = make_pk_handshake(NULL);
-	
-	
+	if ((retv = send_handshake(sockfd)))
+		goto close;
 	
 	_fork(&keepalive_pid, &do_keepalive, &sockfd);
 	
@@ -65,11 +63,12 @@ int main(int argc, const char * argv[]) {
 		// pk == buf
 		pk_recv(sockfd, buf, 0);
 		
-		if ((retv = check_ver(pk)))
-			goto exit;
+		if ((retv = check_version(pk)))
+			goto close;
 	}
 	
-exit:
+close:
 	close(sockfd);
+exit:
 	return retv;
 }
