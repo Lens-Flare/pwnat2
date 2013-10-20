@@ -118,7 +118,7 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int open_socket(char * hostname, char * servname, int * sockfd) {
+int open_socket(const char * hostname, const char * servname, int * sockfd) {
 	int retv, yes;
 	struct addrinfo hints, *servinfo, *p;
 	
