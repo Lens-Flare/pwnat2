@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "server.h"
 #include "../network/network.h"
@@ -94,7 +95,7 @@ close:
 
 int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd) {
 	if (!fork())
-		return do_handler(sockfd, addr, addrlen, acptfd);
+		exit(do_handler(sockfd, addr, addrlen, acptfd));
 	return 0;
 }
 
@@ -106,7 +107,7 @@ int do_listener(int sockfd) {
 	while (1) {
 		if ((acptfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen)) < 0) {
 			perror("accept");
-			return 0;
+			continue;
 		}
 		
 		fork_handler(sockfd, addr, addrlen, acptfd);
@@ -124,7 +125,7 @@ int fork_listener(const char * port, int backlog, pid_t * cpid) {
 	}
 	
 	if (cpid == NULL || !(*cpid = fork()))
-		do_listener(sockfd);
+		exit(do_listener(sockfd));
 	
 	return 0;
 }
