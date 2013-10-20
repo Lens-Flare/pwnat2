@@ -16,9 +16,9 @@
 #include "network.h"
 
 #ifdef __APPLE__
-	#define pk_hs_hash(dest, src) CC_SHA256(src, HANDSHAKE_SIZE, dest);
+	#define pk_hs_hash(dest, src) CC_SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
 #else
-	#define pk_hs_hash(dest, src) SHA256(src, HANDSHAKE_SIZE, dest);
+	#define pk_hs_hash(dest, src) SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
 #endif
 
 #pragma mark Packet Transmission/Reception
