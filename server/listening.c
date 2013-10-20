@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <stdio.h>
 
-#include "network.h"
+#include "../network/network.h"
 
 int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd) {
 	int retv = 0;
