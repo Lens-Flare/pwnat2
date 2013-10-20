@@ -35,8 +35,6 @@ void hton_pk(pk_keepalive_t * pk) {
 	pk->size = htonl(pk->size);
 	
 	switch (pk->type) {
-		case PK_KEEPALIVE:
-			break;
 		case PK_ADVERTIZE:
 			((pk_advertize_t *)pk)->port = htons(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = htonl(((pk_advertize_t *)pk)->reserved);
@@ -47,10 +45,6 @@ void hton_pk(pk_keepalive_t * pk) {
 			((pk_service_t *)pk)->port = htons(((pk_service_t *)pk)->port);
 			((pk_service_t *)pk)->reserved = htonl(((pk_service_t *)pk)->reserved);
 			hton_str(&(((pk_service_t *)pk)->name));
-			break;
-		case PK_REQUEST:
-			break;
-		case PK_FORWARD:
 			break;
 		default:
 			break;
@@ -71,22 +65,16 @@ void ntoh_pk(pk_keepalive_t * pk) {
 	pk->size = ntohs(pk->size);
 	
 	switch (pk->type) {
-		case PK_KEEPALIVE:
-			break;
 		case PK_ADVERTIZE:
 			((pk_advertize_t *)pk)->port = ntohs(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = ntohl(((pk_advertize_t *)pk)->reserved);
-			hton_str(&(((pk_advertize_t *)pk)->name));
+			ntoh_str(&(((pk_advertize_t *)pk)->name));
 			break;
 		case PK_SERVICE:
-			hton_addr(&(((pk_service_t *)pk)->address));
+			ntoh_addr(&(((pk_service_t *)pk)->address));
 			((pk_service_t *)pk)->port = ntohs(((pk_service_t *)pk)->port);
 			((pk_service_t *)pk)->reserved = ntohl(((pk_service_t *)pk)->reserved);
-			hton_str(&(((pk_service_t *)pk)->name));
-			break;
-		case PK_REQUEST:
-			break;
-		case PK_FORWARD:
+			ntoh_str(&(((pk_service_t *)pk)->name));
 			break;
 		default:
 			break;

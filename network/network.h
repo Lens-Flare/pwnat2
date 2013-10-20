@@ -13,10 +13,13 @@
 #include <netdb.h>
 
 #define PK_KEEPALIVE	0
-#define PK_ADVERTIZE	1
-#define PK_SERVICE		2
-#define PK_REQUEST		3
-#define PK_FORWARD		4
+#define PK_BADVER		1
+#define PK_ADVERTIZE	2
+#define PK_SERVICE		3
+#define PK_REQUEST		4
+#define PK_FORWARD		5
+
+#define NET_VER			1
 
 #pragma pack(push)
 #pragma pack(1)
@@ -58,15 +61,9 @@ struct pk_service {
 	struct _pk_string name; // service name
 };
 
-// a service info request packet - PK_REQUEST
-struct pk_request {
-	struct pk_keepalive _super;
-};
-
 typedef struct pk_keepalive pk_keepalive_t;
 typedef struct pk_advertize pk_advertize_t;
 typedef struct pk_service pk_service_t;
-typedef struct pk_request pk_request_t;
 
 #pragma pack(pop)
 
