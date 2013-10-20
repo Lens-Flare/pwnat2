@@ -314,6 +314,32 @@ pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, co
 	return serv;
 }
 
+int check_version(pk_keepalive_t * pk) {
+	switch (pk->type) {
+		case PK_BADSWVER:
+			fprintf(stderr, "Server says incompatible software version (%d.%d-r%d.%d)", pk->version[0], pk->version[1], pk->version[2], pk->version[3]);
+			return 1;
+			break;
+		case PK_BADNETVER:
+			fprintf(stderr, "Server says incompatible network structure version (%d)", pk->netver);
+			return 2;
+			break;
+		default:
+			if (pk->version[0] != MAJOR_VERSION)
+				return 3;
+			if (pk->version[1] != MINOR_VERSION)
+				return 4;
+			if (pk->version[2] != REVISION)
+				return 5;
+			if (pk->version[3] != SUBREVISION)
+				return 6;
+			if (pk->netver != NET_VER)
+				return 7;
+			return 0;
+			break;
+	}
+}
+
 int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	uint8_t check[HANDSHAKE_SIZE];
 	
@@ -324,7 +350,6 @@ int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	
 	return !memcmp(&recv->hash, check, HANDSHAKE_SIZE);
 }
-
 
 
 

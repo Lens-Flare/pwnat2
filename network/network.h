@@ -126,6 +126,7 @@ pk_response_t * make_pk_response(unsigned short services);
 pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name);
 pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name);
 
+int check_version(pk_keepalive_t * pk);
 int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv);
 
 #endif
