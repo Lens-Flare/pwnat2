@@ -16,4 +16,6 @@
 
 #define SERVER_PORT		"45678"
 
+void _sleep(int millis);
+
 #endif
