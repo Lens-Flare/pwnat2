@@ -21,6 +21,68 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 	if ((retv = recv_handshake(acptfd)))
 		goto close;
 	
+	while (1) {
+		pk_keepalive_t * bad;
+		
+		if ((retv = pk_recv(acptfd, buf, 0) < 0))
+			goto close;
+		
+		if ((retv = check_version(pk))) {
+			if (retv != NET_ERR_SERVER_BAD_SOFTWARE_VERSION && retv != NET_ERR_SERVER_BAD_NETWORK_VERSION) {
+				pk_type_t type;
+				
+				switch (retv) {
+					case NET_ERR_BAD_MAJOR_VERSION:
+					case NET_ERR_BAD_MINOR_VERSION:
+					case NET_ERR_BAD_REVISION:
+					case NET_ERR_BAD_SUBREVISION:
+						type = PK_BADSWVER;
+						break;
+					case NET_ERR_BAD_NETWORK_VERSION:
+						type = PK_BADNETVER;
+						break;
+					default:
+						goto close;
+						break;
+				}
+				
+				if ((retv = !(bad = make_pk_keepalive(type))))
+					goto close;
+				
+				pk_send(acptfd, bad, 0);
+				free_packet(bad);
+			}
+			goto close;
+		}
+		
+		switch (pk->type) {
+			case PK_KEEPALIVE:
+				break;
+			
+			case PK_ADVERTIZE:
+				// update list
+				break;
+				
+			case PK_REQUEST:
+				// send list
+				break;
+				
+			case PK_FORWARD:
+				// forward packet
+				break;
+				
+			default:
+				if ((retv = !(bad = make_pk_keepalive(PK_BADPACKET))))
+					goto close;
+				
+				if ((retv = pk_send(acptfd, bad, 0) < 0)) {
+					free_packet(bad);
+					goto close;
+				}
+				break;
+		}
+	}
+	
 close:
 	close(acptfd);
 	return retv;
