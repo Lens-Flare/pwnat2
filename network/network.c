@@ -19,7 +19,20 @@
 #pragma mark Packet Transmission/Reception
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags) {
-	return send(sockfd, pk, pk->size, flags);
+	ssize_t retv;
+	
+	if (!pk)
+		return 0;
+	
+	hton_pk(pk);
+	retv = send(sockfd, pk, pk->size, flags);
+	ntoh_pk(pk);
+	if (retv >= 0 && retv != pk->size) {
+		fprintf(stderr, "%zd bytes of %d bytes sent\n", retv, pk->size);
+		retv = -1;
+	}
+	
+	return retv;
 }
 
 static void hton_addr(struct _pk_address * addr) {
@@ -49,7 +62,18 @@ void hton_pk(pk_keepalive_t * pk) {
 }
 
 ssize_t pk_recv(int sockfd, char buf[UINT8_MAX + 1], int flags) {
-	return recv(sockfd, buf, UINT8_MAX + 1, flags);
+	ssize_t retv;
+	
+	if ((retv = recv(sockfd, buf, UINT8_MAX + 1, flags)) >= 0) {
+		pk_keepalive_t * pk = (pk_keepalive_t *)buf;
+		ntoh_pk(pk);
+		if (retv >= 0 && retv != pk->size) {
+			fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", retv, pk->size);
+			retv = -1;
+		}
+	}
+	
+	return retv;
 }
 
 static void ntoh_addr(struct _pk_address * addr) {
