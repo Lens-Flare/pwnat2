@@ -315,47 +315,47 @@ pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, co
 
 #pragma mark - Packet Checking
 
-errcode check_version(pk_keepalive_t * pk) {
+pk_error_code_t check_version(pk_keepalive_t * pk) {
 	switch (pk->type) {
 		case PK_BADSWVER:
 			fprintf(stderr, "Server says incompatible software version (%d.%d-r%d.%d)", pk->version[0], pk->version[1], pk->version[2], pk->version[3]);
-			return 1;
+			return NET_ERR_SERVER_BAD_SOFTWARE_VERSION;
 			break;
 		case PK_BADNETVER:
 			fprintf(stderr, "Server says incompatible network structure version (%d)", pk->netver);
-			return 2;
+			return NET_ERR_SERVER_BAD_NETWORK_VERSION;
 			break;
 		default:
 			if (pk->version[0] != MAJOR_VERSION)
-				return 3;
+				return NET_ERR_BAD_MAJOR_VERSION;
 			if (pk->version[1] != MINOR_VERSION)
-				return 4;
+				return NET_ERR_BAD_MINOR_VERSION;
 			if (pk->version[2] != REVISION)
-				return 5;
+				return NET_ERR_BAD_REVISION;
 			if (pk->version[3] != SUBREVISION)
-				return 6;
+				return NET_ERR_BAD_SUBREVISION;
 			if (pk->netver != NET_VER)
-				return 7;
-			return 0;
+				return NET_ERR_BAD_NETWORK_VERSION;
 			break;
 	}
+	return SUCCESS;
 }
 
-errcode check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
+pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	uint8_t check[HANDSHAKE_SIZE];
 	
 	if (hs) {
 		if (!memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE))
-			return 1;
+			return NET_ERR_HANDSHAKE_DATA_IS_NOT_HASH;
 		if ((hs->step == PK_HS_INITIAL && recv->step != PK_HS_ACKNOWLEDGE) ||
 			(hs->step == PK_HS_ACKNOWLEDGE && recv->step != PK_HS_FINAL))
-			return 3;
+			return NET_ERR_HANDSHAKE_BAD_SEQUENCE;
 	} else if (recv->step != PK_HS_INITIAL)
-		return 3;
+		return NET_ERR_HANDSHAKE_BAD_SEQUENCE;
 	
 	pk_hs_hash(check, &recv->data);
 	if (!memcmp(&recv->hash, check, HANDSHAKE_SIZE))
-		return 2;
+		return NET_ERR_HANDSHAKE_INCORRECT_HASH;
 	
 	return 0;
 }
