@@ -14,6 +14,7 @@
 #include <netdb.h>
 
 #include "network.h"
+#include "common.h"
 
 
 void *get_in_addr(struct sockaddr *sa)
@@ -85,7 +86,7 @@ void ntoh_pk(pk_keepalive_t * pk) {
 	}
 }
 
-int open_socket(char * hostname, char * servname, int backlog, int * sockfd) {
+int open_socket(char * hostname, char * servname, int * sockfd) {
 	int retv, yes;
 	struct addrinfo hints, *servinfo, *p;
 	
@@ -128,3 +129,106 @@ int open_socket(char * hostname, char * servname, int backlog, int * sockfd) {
 	
 	return 0;
 }
+
+pk_keepalive_t * alloc_packet(unsigned long size) {
+	if (size < UINT32_MAX)
+		return 0;
+	
+	pk_keepalive_t * pk = calloc(1, size);
+	
+	pk->size = (uint32_t)size;
+	
+	return pk;
+}
+
+void init_packet(pk_keepalive_t * pk, unsigned char type) {
+	pk->version[0] = MAJOR_VERSION;
+	pk->version[1] = MINOR_VERSION;
+	pk->version[2] = REVISION;
+	pk->version[3] = SUBREVISION;
+	
+	pk->netver = NET_VER;
+	
+	pk->type = type;
+}
+
+void free_packet(pk_keepalive_t * pk) {
+	free(pk);
+}
+
+void init_string(struct _pk_string * dest, const char * src) {
+	dest->length = (uint32_t)strlen(src) + 1;
+	strcpy((char *)&dest->data, src);
+}
+
+void init_address(struct _pk_address * dest, struct in_addr * src) {
+	dest->family = AF_INET;
+	dest->data[0] = src->s_addr;
+	dest->data[1] = 0;
+	dest->data[2] = 0;
+	dest->data[3] = 0;
+}
+
+void init_address6(struct _pk_address * dest, struct in6_addr * src) {
+	dest->family = AF_INET6;
+	for (int i = 0; i < 4; i++)
+		dest->data[i] = src->__u6_addr.__u6_addr32[i];
+}
+
+pk_keepalive_t * make_pk_keepalive(unsigned char type) {
+	pk_keepalive_t * pk = alloc_packet(sizeof(pk_keepalive_t));
+	init_packet(pk, type);
+	return pk;
+}
+
+pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
+	unsigned long length = strlen(name);
+	unsigned long size = sizeof(pk_advertize_t);
+	
+	pk_advertize_t * ad = (pk_advertize_t *)alloc_packet(size + length);
+	if (!ad)
+		return ad;
+	
+	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
+	ad->port = port;
+	init_string(&ad->name, name);
+	
+	return ad;
+}
+
+pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name) {
+	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
+	if (!serv)
+		return serv;
+	
+	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
+	init_address(&serv->address, &address);
+	serv->port = port;
+	init_string(&serv->name, name);
+	
+	return serv;
+}
+
+pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name) {
+	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
+	if (!serv)
+		return serv;
+	
+	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
+	init_address6(&serv->address, &address);
+	serv->port = port;
+	init_string(&serv->name, name);
+	
+	return serv;
+}
+
+
+
+
+
+
+
+
+
+
+

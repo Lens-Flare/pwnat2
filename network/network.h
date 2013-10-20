@@ -13,11 +13,12 @@
 #include <netdb.h>
 
 #define PK_KEEPALIVE	0
-#define PK_BADVER		1
-#define PK_ADVERTIZE	2
-#define PK_SERVICE		3
-#define PK_REQUEST		4
-#define PK_FORWARD		5
+#define PK_BADNETVER	1
+#define PK_BADSWVER		2
+#define PK_ADVERTIZE	3
+#define PK_SERVICE		4
+#define PK_REQUEST		5
+#define PK_FORWARD		6
 
 #define NET_VER			1
 
@@ -69,6 +70,16 @@ typedef struct pk_service pk_service_t;
 
 void hton_pk(pk_keepalive_t * pk);
 void ntoh_pk(pk_keepalive_t * pk);
-int open_socket(char * hostname, char * servname, int backlog, int * sockfd);
+
+int open_socket(char * hostname, char * servname, int * sockfd);
+
+pk_keepalive_t * alloc_packet(unsigned long size);
+void init_packet(pk_keepalive_t * pk, unsigned char type);
+void free_packet(pk_keepalive_t * pk);
+
+pk_keepalive_t * make_pk_keepalive(unsigned char type);
+pk_advertize_t * make_pk_advertize(unsigned short port, const char * name);
+pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name);
+pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name);
 
 #endif
