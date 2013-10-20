@@ -14,7 +14,6 @@
 #include <netdb.h>
 
 #include "network.h"
-#include "common.h"
 
 #ifdef __APPLE__
 	#define pk_hs_hash(dest, src) CC_SHA256(src, HANDSHAKE_SIZE, dest);
@@ -314,7 +313,9 @@ pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, co
 	return serv;
 }
 
-int check_version(pk_keepalive_t * pk) {
+#pragma mark - Packet Checking
+
+errcode check_version(pk_keepalive_t * pk) {
 	switch (pk->type) {
 		case PK_BADSWVER:
 			fprintf(stderr, "Server says incompatible software version (%d.%d-r%d.%d)", pk->version[0], pk->version[1], pk->version[2], pk->version[3]);
@@ -340,20 +341,70 @@ int check_version(pk_keepalive_t * pk) {
 	}
 }
 
-int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
+errcode check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	uint8_t check[HANDSHAKE_SIZE];
 	
-	if (hs)
-		return !memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE);
+	if (hs) {
+		if (!memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE))
+			return 1;
+		if ((hs->step == PK_HS_INITIAL && recv->step != PK_HS_ACKNOWLEDGE) ||
+			(hs->step == PK_HS_ACKNOWLEDGE && recv->step != PK_HS_FINAL))
+			return 3;
+	} else if (recv->step != PK_HS_INITIAL)
+		return 3;
 	
 	pk_hs_hash(check, &recv->data);
+	if (!memcmp(&recv->hash, check, HANDSHAKE_SIZE))
+		return 2;
 	
-	return !memcmp(&recv->hash, check, HANDSHAKE_SIZE);
+	return 0;
 }
 
+#pragma mark - Handshaking
 
+#define IF_GOTO_EXIT(check) if ((retv = check)) goto exit;
 
+errcode send_handshake(int sockfd) {
+	errcode retv = 0;
+	char buf[256];
+	pk_handshake_t * hs, * recv = (pk_handshake_t *)buf;
+	
+	IF_GOTO_EXIT(!(hs = make_pk_handshake(NULL)));
+	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
+	
+	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
+	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
+	IF_GOTO_EXIT(check_handshake(hs, recv));
+	
+	free(hs);
+	IF_GOTO_EXIT(!(hs = make_pk_handshake(recv)));
+	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
+	
+exit:
+	free_packet((pk_keepalive_t *)hs);
+	return retv;
+}
 
+errcode recv_handshake(int sockfd) {
+	errcode retv = 0;
+	char buf[256];
+	pk_handshake_t * hs = NULL, * recv = (pk_handshake_t *)buf;
+	
+	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
+	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
+	IF_GOTO_EXIT(check_handshake(hs, recv));
+	
+	IF_GOTO_EXIT(!(hs = make_pk_handshake(recv)));
+	IF_GOTO_EXIT(pk_send(sockfd, (pk_keepalive_t *)hs, 0) < 0);
+	
+	IF_GOTO_EXIT(pk_recv(sockfd, buf, 0) < 0);
+	IF_GOTO_EXIT(check_version((pk_keepalive_t *)recv));
+	IF_GOTO_EXIT(check_handshake(hs, recv));
+	
+exit:
+	free_packet((pk_keepalive_t *)hs);
+	return retv;
+}
 
 
 

@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <netdb.h>
+#include "common.h"
 
 #ifdef __APPLE__
 	#include <CommonCrypto/CommonDigest.h>
@@ -126,7 +127,23 @@ pk_response_t * make_pk_response(unsigned short services);
 pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name);
 pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name);
 
-int check_version(pk_keepalive_t * pk);
-int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv);
+// 0: success
+// 1: server says bad software version
+// 2: server says bad network version
+// 3: bad major version
+// 4: bad minor version
+// 5: bad revision
+// 6: bad subrevision
+// 7: bad network version
+errcode check_version(pk_keepalive_t * pk);
+
+// 0: success,
+// 1: hs->hash and recv->data don't match
+// 2: recv->hash is not the hash of recv->data
+// 3: wrong step sequence
+errcode check_handshake(pk_handshake_t * hs, pk_handshake_t * recv);
+
+errcode send_handshake(int sockfd);
+errcode recv_handshake(int sockfd);
 
 #endif
