@@ -244,6 +244,7 @@ pk_handshake_t * make_pk_handshake(pk_handshake_t * recv) {
 	if (!recv) {
 		hs->step = PK_HS_INITIAL;
 		_random(&hs->data, HANDSHAKE_SIZE);
+		pk_hs_hash((void *)&hs->hash, &hs->data);
 	} else {
 		switch (recv->step) {
 			case PK_HS_INITIAL:
@@ -313,16 +314,15 @@ pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, co
 	return serv;
 }
 
-int check_handshake(pk_handshake_t * recv) {
+int check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	uint8_t check[HANDSHAKE_SIZE];
+	
+	if (hs)
+		return !memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE);
 	
 	pk_hs_hash(check, &recv->data);
 	
-	for (int i = 0; i < HANDSHAKE_SIZE; i++)
-		if (check[i] != recv->hash[i])
-			return 0;
-	
-	return 1;
+	return !memcmp(&recv->hash, check, HANDSHAKE_SIZE);
 }
 
 
