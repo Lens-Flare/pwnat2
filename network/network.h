@@ -67,4 +67,7 @@ typedef struct pk_request pk_request_t;
 
 #pragma pack(pop)
 
+void hton_pk(pk_keepalive_t * pk);
+void ntoh_pk(pk_keepalive_t * pk);
+
 #endif
