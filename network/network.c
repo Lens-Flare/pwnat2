@@ -67,10 +67,10 @@ void hton_pk(pk_keepalive_t * pk) {
 	}
 }
 
-ssize_t pk_recv(int sockfd, char buf[UINT8_MAX + 1], int flags) {
+ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	ssize_t retv;
 	
-	if ((retv = recv(sockfd, buf, UINT8_MAX + 1, flags)) >= 0) {
+	if ((retv = recv(sockfd, buf, PACKET_SIZE_MAX, flags)) >= 0) {
 		pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 		ntoh_pk(pk);
 		if (retv >= 0 && retv != pk->size) {
