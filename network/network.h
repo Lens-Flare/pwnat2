@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <netdb.h>
+#include <sqlite3.h>
 #include "../common/common.h"
 
 #ifdef __APPLE__
@@ -28,6 +29,7 @@
 #define NET_VER			1
 #define PACKET_SIG		0xB6
 #define PACKET_SIZE_MAX	UINT8_MAX
+#define STRING_SIZE_MAX	(PACKET_SIZE_MAX - sizeof(pk_service))
 
 enum pk_type {
 	PK_KEEPALIVE,
@@ -135,6 +137,9 @@ void hton_pk(pk_keepalive_t * pk);
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags);
 void ntoh_pk(pk_keepalive_t * pk);
 
+int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa);
+void * get_in_addr(struct sockaddr *sa);
+const char * get_port_service_name(int port, const char * proto);
 int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd);
 int connect_socket(const char * hostname, const char * servname, int * sockfd);
 

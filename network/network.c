@@ -14,6 +14,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <sqlite3.h>
 
 #include "network.h"
 
@@ -94,22 +95,35 @@ ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	if (bytes < 0)
 		goto error;
 	
+	if (pk->size == total)
+		goto done;
+	else if (pk->size < total)
+		goto failbytes;
+	
 	total += bytes = recv(sockfd, buf + total, pk->size - total, flags);
 	
-	if (bytes < 0) {
-		perror("recv");
-	} else if (total != pk->size) {
-		fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
-		goto fail;
-	}
+	if (bytes < 0)
+		goto error;
+	else if (total != pk->size)
+		goto failbytes;
 	
+done:
 	ntoh_pk(pk);
-	
+	if (pk->type == PK_ADVERTIZE || pk->type == PK_SERVICE) {
+		struct _pk_string * str = (pk->type = PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
+		
+		if (str->length > 1 || (str->data[0] != '-' && str->data[0] != '+'))
+			str->data[str->length - 1] = 0;
+	}
 exit:
 	return total;
+	
 error:
 	perror("recv");
 	goto exit;
+	
+failbytes:
+	fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
 fail:
 	total = -1;
 	goto exit;
@@ -143,13 +157,18 @@ void ntoh_pk(pk_keepalive_t * pk) {
 
 #pragma mark - Generic Network Functions
 
-void *get_in_addr(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET) {
+int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
+	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_len, SQLITE_TRANSIENT);
+}
+
+void * get_in_addr(struct sockaddr * sa) {
+	if (sa->sa_family == AF_INET)
 		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-	
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+const char * get_port_service_name(int port, const char * proto) {
+	return getservbyport(port, proto)->s_name;
 }
 
 int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd) {
