@@ -39,7 +39,8 @@ enum pk_type {
 	PK_REQUEST,
 	PK_RESPONSE,
 	PK_SERVICE,
-	PK_FORWARD
+	PK_FORWARD,
+	PK_EXITING
 };
 
 enum pk_hs_step {
