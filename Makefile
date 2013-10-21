@@ -3,8 +3,8 @@ common_objs =  $(builddir)/common-common.o $(builddir)/network-network.o
 consumer_objs = $(builddir)/consumer-main.o $(common_objs)
 server_objs = $(builddir)/server-main.o $(builddir)/server-listening.o $(common_objs)
 provider_objs = $(builddir)/provider-main.o $(common_objs)
-link_options = -lcrypto
-comp_options = -O2 --std=gnu11 -Wall -Wno-unknown-pragmas
+link_options = -lcrypto $LFLAGS
+comp_options = -O2 --std=gnu11 -Wall -Wno-unknown-pragmas $CFLAGS
 options = $(link_options) $(comp_options)
 
 .PHONY : all consumer server provider clean
