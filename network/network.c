@@ -72,27 +72,47 @@ void hton_pk(pk_keepalive_t * pk) {
 }
 
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
-	ssize_t bytes = 0;
+	ssize_t bytes = 0, total = 0;
+	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
 	buf[0] = 0;
-	bytes = recv(sockfd, buf, PACKET_SIZE_MAX, flags);
+	
+	total += bytes = recv(sockfd, buf, 1, flags);
+	
+	if (bytes < 0)
+		goto error;
+	else if (bytes == 0) {
+		fprintf(stderr, "Connection closed\n");
+		goto fail;
+	} else if (buf[0] != (char)PACKET_SIG) {
+		fprintf(stderr, "Missing packet signature\n");
+		goto fail;
+	}
+	
+	total += bytes = recv(sockfd, buf + total, sizeof(pk_keepalive_t) - total, flags);
+	
+	if (bytes < 0)
+		goto error;
+	
+	total += bytes = recv(sockfd, buf + total, pk->size - total, flags);
 	
 	if (bytes < 0) {
 		perror("recv");
-	} else if (buf[0] != (char)PACKET_SIG) {
-		fprintf(stderr, "Missing packet signature\n");
-		bytes = -1;
-	} else {
-		pk_keepalive_t * pk = (pk_keepalive_t *)buf;
-		ntoh_pk(pk);
-		
-		if (bytes != pk->size) {
-			fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
-			bytes = -1;
-		}
+	} else if (total != pk->size) {
+		fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
+		goto fail;
 	}
 	
-	return bytes;
+	ntoh_pk(pk);
+	
+exit:
+	return total;
+error:
+	perror("recv");
+	goto exit;
+fail:
+	total = -1;
+	goto exit;
 }
 
 static void ntoh_addr(struct _pk_address * addr) {
@@ -334,7 +354,7 @@ pk_handshake_t * make_pk_handshake(pk_handshake_t * recv) {
 }
 
 pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
-	pk_advertize_t * ad = (pk_advertize_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
+	pk_advertize_t * ad = (pk_advertize_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!ad)
 		return ad;
 	
@@ -357,7 +377,7 @@ pk_response_t * make_pk_response(unsigned short services) {
 }
 
 pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name) {
-	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
+	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
 		return serv;
 	
@@ -370,7 +390,7 @@ pk_service_t * make_pk_service(struct in_addr address, unsigned short port, cons
 }
 
 pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name) {
-	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name));
+	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
 		return serv;
 	
