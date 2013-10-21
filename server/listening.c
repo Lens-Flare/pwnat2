@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "server.h"
 #include "../network/network.h"
@@ -108,6 +109,15 @@ int do_listener(int sockfd) {
 	struct sockaddr_storage addr;
 	socklen_t addrlen;
 	int acptfd;
+    struct sigaction sa;
+	
+    sa.sa_handler = _waitpid_sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("sigaction");
+        return 1;
+    }
 	
 	while (1) {
 		if ((acptfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen)) < 0) {

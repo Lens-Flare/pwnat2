@@ -10,7 +10,10 @@
 #else
 	#include <unistd.h>
 	#include <stdio.h>
+	#include <sys/wait.h>
+	#include <signal.h>
 #endif
+
 
 #include "common.h"
 
@@ -55,4 +58,8 @@ int _random(void * data, size_t len) {
 	#endif
 	
 	return 0;
+}
+
+void _waitpid_sigchld_handler(int s) {
+    while(waitpid(-1, NULL, WNOHANG) > 0);
 }
