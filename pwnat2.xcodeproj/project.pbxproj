@@ -100,7 +100,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		4284F83F181480A4008D3B8C /* Makefile */ = {isa = PBXFileReference; explicitFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		4284F83F181480A4008D3B8C /* Makefile */ = {isa = PBXFileReference; explicitFileType = text; path = Makefile; sourceTree = "<group>"; };
 		4284F840181480A4008D3B8C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
 		4291AF87181379EF003F8680 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		4291AF8818138C87003F8680 /* common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = common.c; sourceTree = "<group>"; };
