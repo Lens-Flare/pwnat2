@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include "network.h"
 
@@ -73,11 +74,14 @@ void hton_pk(pk_keepalive_t * pk) {
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	ssize_t bytes = 0;
 	
-	for (buf[0] = 0; buf[0] != (char)PACKET_SIG && bytes >= 0;)
-		bytes = recv(sockfd, buf, PACKET_SIZE_MAX, flags);
+	buf[0] = 0;
+	bytes = recv(sockfd, buf, PACKET_SIZE_MAX, flags);
 	
 	if (bytes < 0) {
 		perror("recv");
+	} else if (buf[0] != (char)PACKET_SIG) {
+		fprintf(stderr, "Missing packet signature\n");
+		bytes = -1;
 	} else {
 		pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 		ntoh_pk(pk);
@@ -97,7 +101,7 @@ static void ntoh_addr(struct _pk_address * addr) {
 }
 
 void ntoh_pk(pk_keepalive_t * pk) {
-	pk->netver = ntohs(pk->netver);
+	pk->netver = ntohl(pk->netver);
 	
 	switch (pk->type) {
 		case PK_ADVERTIZE:
@@ -410,7 +414,7 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	uint8_t check[HANDSHAKE_SIZE];
 	
 	if (hs) {
-		if (!memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE))
+		if (memcmp(&hs->hash, &recv->data, HANDSHAKE_SIZE))
 			return NET_ERR_HANDSHAKE_DATA_IS_NOT_HASH;
 		if ((hs->step == PK_HS_INITIAL && recv->step != PK_HS_ACKNOWLEDGE) ||
 			(hs->step == PK_HS_ACKNOWLEDGE && recv->step != PK_HS_FINAL))
@@ -419,7 +423,7 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 		return NET_ERR_HANDSHAKE_BAD_SEQUENCE;
 	
 	pk_hs_hash(check, &recv->data);
-	if (!memcmp(&recv->hash, check, HANDSHAKE_SIZE))
+	if (memcmp(&recv->hash, check, HANDSHAKE_SIZE))
 		return NET_ERR_HANDSHAKE_INCORRECT_HASH;
 	
 	return 0;
@@ -431,7 +435,7 @@ errcode send_handshake(int sockfd) {
 	errcode retv = 0;
 	ssize_t bytes;
 	char buf[256];
-	pk_handshake_t * hs, * recv = (pk_handshake_t *)buf;
+	pk_handshake_t * hs, * recvd = (pk_handshake_t *)buf;
 	
 	
 	
@@ -449,11 +453,11 @@ errcode send_handshake(int sockfd) {
 	if ((retv = bytes < 0))
 		goto free;
 	
-	retv = check_version((pk_keepalive_t *)recv);
+	retv = check_version((pk_keepalive_t *)recvd);
 	if (retv)
 		goto free;
 	
-	retv = check_handshake(hs, recv);
+	retv = check_handshake(hs, recvd);
 	if (retv)
 		goto free;
 	
@@ -461,7 +465,7 @@ errcode send_handshake(int sockfd) {
 	
 	free_packet((pk_keepalive_t *)hs);
 	
-	hs = make_pk_handshake(NULL);
+	hs = make_pk_handshake(recvd);
 	if ((retv = !hs))
 		goto free;
 	
@@ -480,7 +484,7 @@ errcode recv_handshake(int sockfd) {
 	errcode retv = 0;
 	ssize_t bytes;
 	char buf[256];
-	pk_handshake_t * hs = NULL, * recv = (pk_handshake_t *)buf;
+	pk_handshake_t * hs = NULL, * recvd = (pk_handshake_t *)buf;
 	
 	
 	
@@ -488,17 +492,17 @@ errcode recv_handshake(int sockfd) {
 	if ((retv = bytes < 0))
 		goto free;
 	
-	retv = check_version((pk_keepalive_t *)recv);
+	retv = check_version((pk_keepalive_t *)recvd);
 	if (retv)
 		goto free;
 	
-	retv = check_handshake(hs, recv);
+	retv = check_handshake(hs, recvd);
 	if (retv)
 		goto free;
 	
 	
 	
-	hs = make_pk_handshake(NULL);
+	hs = make_pk_handshake(recvd);
 	if ((retv = !hs))
 		goto free;
 	
@@ -512,11 +516,11 @@ errcode recv_handshake(int sockfd) {
 	if ((retv = bytes < 0))
 		goto free;
 	
-	retv = check_version((pk_keepalive_t *)recv);
+	retv = check_version((pk_keepalive_t *)recvd);
 	if (retv)
 		goto free;
 	
-	retv = check_handshake(hs, recv);
+	retv = check_handshake(hs, recvd);
 	if (retv)
 		goto free;
 	
