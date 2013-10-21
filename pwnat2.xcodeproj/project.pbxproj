@@ -32,7 +32,6 @@
 		42B8EA54180F3CB30032EA4B /* provider.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 42B8EA53180F3CB30032EA4B /* provider.1 */; };
 		42B8EA5F180F3CB80032EA4B /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 42B8EA5E180F3CB80032EA4B /* main.c */; };
 		42B8EA61180F3CB80032EA4B /* consumer.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 42B8EA60180F3CB80032EA4B /* consumer.1 */; };
-		42B8EA67180F3FEE0032EA4B /* listening.c in Sources */ = {isa = PBXBuildFile; fileRef = 42B8EA66180F3FEE0032EA4B /* listening.c */; };
 		42B8EA6B180F44330032EA4B /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 42B8EA6A180F44330032EA4B /* network.c */; };
 		42B8EA6C180F44330032EA4B /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 42B8EA6A180F44330032EA4B /* network.c */; };
 		42B8EA6D180F44330032EA4B /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 42B8EA6A180F44330032EA4B /* network.c */; };
@@ -113,8 +112,6 @@
 		42B8EA5C180F3CB70032EA4B /* consumer */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = consumer; sourceTree = BUILT_PRODUCTS_DIR; };
 		42B8EA5E180F3CB80032EA4B /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		42B8EA60180F3CB80032EA4B /* consumer.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = consumer.1; sourceTree = "<group>"; };
-		42B8EA66180F3FEE0032EA4B /* listening.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = listening.c; sourceTree = "<group>"; };
-		42B8EA68180F40030032EA4B /* server.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = server.h; sourceTree = "<group>"; };
 		42B8EA6A180F44330032EA4B /* network.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = network.c; sourceTree = "<group>"; };
 		42B8EA6E180F449C0032EA4B /* network.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = network.h; sourceTree = "<group>"; };
 		42B8EA6F180F6A2B0032EA4B /* libsqlite3.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.0.dylib; path = usr/lib/libsqlite3.0.dylib; sourceTree = SDKROOT; };
@@ -187,8 +184,6 @@
 		42B8EA43180F3CAA0032EA4B /* server */ = {
 			isa = PBXGroup;
 			children = (
-				42B8EA68180F40030032EA4B /* server.h */,
-				42B8EA66180F3FEE0032EA4B /* listening.c */,
 				42B8EA44180F3CAA0032EA4B /* main.c */,
 				42B8EA46180F3CAA0032EA4B /* server.1 */,
 			);
@@ -322,7 +317,6 @@
 				42B8EA6B180F44330032EA4B /* network.c in Sources */,
 				42B8EA45180F3CAA0032EA4B /* main.c in Sources */,
 				4291AF8918138C87003F8680 /* common.c in Sources */,
-				42B8EA67180F3FEE0032EA4B /* listening.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
