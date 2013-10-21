@@ -76,6 +76,10 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				// forward packet
 				break;
 				
+			case PK_EXITING:
+				printf("Client/provider exiting\n");
+				goto close;
+				
 			default:
 				if ((retv = !(bad = make_pk_keepalive(PK_BADPACKET))))
 					goto close;
@@ -84,6 +88,7 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 					free_packet(bad);
 					goto close;
 				}
+				
 				break;
 		}
 	}
