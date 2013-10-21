@@ -3,7 +3,7 @@ CC = gcc
 LD = gcc
 
 # Flags
-override LFLAGS := -lcrypto $(LFLAGS)
+override LFLAGS := -lcrypto -lsqlite3 $(LFLAGS)
 override CFLAGS := -O2 --std=gnu11 -Wall -Wno-unknown-pragmas $(CFLAGS)
 
 # Misc
