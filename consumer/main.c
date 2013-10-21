@@ -39,17 +39,22 @@ int ask_server_for_services(pk_service_t ** srvs)
 	int num_serv;
 	int ret;
 	int i = -1;
-	int paclen = sizeof(pk_keepalive_t);
+//	int paclen = sizeof(pk_keepalive_t);
 	pk_keepalive_t * packet;
 	char buf[PACKET_SIZE_MAX];
 	pk_keepalive_t* rec_pk = (pk_keepalive_t*) buf;
 	
 	
-	ret = connect_socket("computingeureka.com", SERVER_PORT, &sockfd);
+	ret = connect_socket(NULL, SERVER_PORT, &sockfd);
 	if(ret)
 	{
 //		perror("consumer: open_socket");
 		goto exit;
+	}
+	
+	ret = send_handshake(sockfd);
+	if (ret) {
+		goto close_sock;
 	}
 	
 //	Make a request packet.
@@ -62,7 +67,7 @@ int ask_server_for_services(pk_service_t ** srvs)
 	
 //	Send the request.
 	ret = pk_send(sockfd, packet, 0);
-	if(ret != paclen)
+	if(ret < 0)
 	{
 //		perror("consumer: pk_send");
 		goto free_pk;
