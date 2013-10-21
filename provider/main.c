@@ -38,8 +38,10 @@ int main(int argc, const char * argv[]) {
 	if ((retv = connect_socket(NULL, SERVER_PORT, &sockfd)))
 		goto exit;
 	
-	if ((retv = send_handshake(sockfd)))
+	if ((retv = send_handshake(sockfd))) {
+		fprintf(stderr, "Bad handshake\n");
 		goto close;
+	}
 	
 	_fork(&keepalive_pid, &do_keepalive, &sockfd);
 	
