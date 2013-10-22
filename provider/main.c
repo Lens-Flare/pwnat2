@@ -41,7 +41,7 @@ int main(int argc, const char * argv[]) {
 	if ((retv = !ad))
 		goto exit;
 	
-	if ((retv = connect_socket(NULL, SERVER_PORT, &sockfd)))
+	if ((retv = connect_socket("localhost", SERVER_PORT, &sockfd)))
 		goto exit;
 	
 	if ((retv = send_handshake(sockfd))) {
@@ -54,13 +54,13 @@ int main(int argc, const char * argv[]) {
 	// send all of the services
 	{
 		init_pk_advertize(ad, 7777, "Terraria");
-		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv < 0) goto free;
 		
 		init_pk_advertize(ad, 80, "HTTP");
-		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv < 0) goto free;
 		
 		init_pk_advertize(ad, 22, "SSH");
-		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv < 0) goto free;
 	}
 	
 free:

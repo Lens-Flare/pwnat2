@@ -61,9 +61,6 @@ void hton_pk(pk_keepalive_t * pk) {
 			((pk_advertize_t *)pk)->port = htons(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = htonl(((pk_advertize_t *)pk)->reserved);
 			break;
-		case PK_RESPONSE:
-			((pk_response_t *)pk)->services = htons(((pk_response_t *)pk)->services);
-			break;
 		case PK_SERVICE:
 			hton_addr(&(((pk_service_t *)pk)->address));
 			((pk_service_t *)pk)->port = htons(((pk_service_t *)pk)->port);
@@ -113,7 +110,7 @@ ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 done:
 	ntoh_pk(pk);
 	if (pk->type == PK_ADVERTIZE || pk->type == PK_SERVICE) {
-		struct _pk_string * str = (pk->type = PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
+		struct _pk_string * str = (pk->type == PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
 		
 		if (str->length > 1 || (str->data[0] != '-' && str->data[0] != '+'))
 			str->data[str->length - 1] = 0;
@@ -145,9 +142,6 @@ void ntoh_pk(pk_keepalive_t * pk) {
 			((pk_advertize_t *)pk)->port = ntohs(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = ntohl(((pk_advertize_t *)pk)->reserved);
 			break;
-		case PK_RESPONSE:
-			((pk_response_t *)pk)->services = ntohs(((pk_response_t *)pk)->services);
-			break;
 		case PK_SERVICE:
 			ntoh_addr(&(((pk_service_t *)pk)->address));
 			((pk_service_t *)pk)->port = ntohs(((pk_service_t *)pk)->port);
@@ -163,7 +157,7 @@ void ntoh_pk(pk_keepalive_t * pk) {
 #pragma mark - Generic Network Functions
 
 int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
-	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_len, SQLITE_TRANSIENT);
+	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_family == AF_INET6 ? 16 : 4, SQLITE_TRANSIENT);
 }
 
 
@@ -382,17 +376,6 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	return ad;
 }
 
-pk_response_t * make_pk_response(unsigned short services) {
-	pk_response_t * rsp = (pk_response_t *)alloc_packet(sizeof(pk_response_t));
-	if (!rsp)
-		return rsp;
-	
-	init_packet((pk_keepalive_t *)rsp, PK_RESPONSE);
-	rsp->services = services;
-	
-	return rsp;
-}
-
 pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name) {
 	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
@@ -410,17 +393,17 @@ void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * na
 	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
 	
 	ad->port = port;
-	pkcpy_string(&ad->name, name);
+	if (name) pkcpy_string(&ad->name, name);
 }
 
 void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
-	serv->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
+	serv->_super.size = sizeof(pk_service_t) + strlen(name) + 1;
 	
 	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
 	
-	pkcpy_address(&serv->address, address);
+	if (address) pkcpy_address(&serv->address, address);
 	serv->port = port;
-	pkcpy_string(&serv->name, name);
+	if (name) pkcpy_string(&serv->name, name);
 }
 
 
