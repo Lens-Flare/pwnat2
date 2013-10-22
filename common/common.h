@@ -12,7 +12,7 @@
 #define MAJOR_VERSION	0
 #define MINOR_VERSION	1
 #define REVISION		0
-#define SUBREVISION		0
+#define SUBREVISION		1
 
 #define SERVER_PORT		"45678"
 
@@ -25,5 +25,6 @@ typedef int errcode;
 void _sleep(int millis);
 int _fork(pid_t * cpid, int (*run)(void *), void * params);
 int _random(void * data, size_t len);
+void _waitpid_sigchld_handler(int s);
 
 #endif

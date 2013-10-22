@@ -1,45 +1,73 @@
-builddir = build
-common_objs =  $(builddir)/common-common.o $(builddir)/network-network.o
-consumer_objs = $(builddir)/consumer-main.o $(common_objs)
-server_objs = $(builddir)/server-main.o $(builddir)/server-listening.o $(common_objs)
-provider_objs = $(builddir)/provider-main.o $(common_objs)
-link_options = -lcrypto $(LFLAGS)
-comp_options = -O2 --std=gnu11 -Wall -Wno-unknown-pragmas $(CFLAGS)
-options = $(link_options) $(comp_options)
+# Commands
+CC = gcc
+LD = gcc
 
-.PHONY : all consumer server provider clean
-all : $(builddir)/consumer $(builddir)/server $(builddir)/provider
+# Flags
+override LFLAGS := -lcrypto -lsqlite3 $(LFLAGS)
+override CFLAGS := -O2 --std=gnu11 -Wall -Wno-unknown-pragmas $(CFLAGS)
 
-consumer : $(builddir)/consumer
-server : $(builddir)/server
-provider : $(builddir)/provider
+# Misc
+UNAME = $(shell uname)
 
-$(builddir)/consumer : $(consumer_objs)
-	cc -o $(builddir)/consumer $(consumer_objs) $(options)
+# Targets etc
+COMMON = network common
+TARGETS = consumer server provider
 
-$(builddir)/server : $(server_objs)
-	cc -o $(builddir)/server $(server_objs) $(options)
+# Build Directories
+BUILD_DIR = build
+TARGET_DIR = $(BUILD_DIR)/target
+OBJECT_DIR = $(BUILD_DIR)/object
 
-$(builddir)/provider : $(provider_objs)
-	cc -o $(builddir)/provider $(provider_objs) $(options)
+# Objects
+COMMON_OBJS = $(foreach dir,$(COMMON),$(patsubst %.c,$(OBJECT_DIR)/%.o,$(wildcard $(dir)/*.c)))
+CONSUMER_OBJS = $(patsubst %.c,$(OBJECT_DIR)/%.o,$(wildcard consumer/*.c))
+SERVER_OBJS = $(patsubst %.c,$(OBJECT_DIR)/%.o,$(wildcard server/*.c))
+PROVIDER_OBJS = $(patsubst %.c,$(OBJECT_DIR)/%.o,$(wildcard provider/*.c))
 
 
-$(builddir)/network-%.o : network/%.c
-	cc -c $(comp_options) $< -o $@
-$(builddir)/common-%.o : common/%.c
-	cc -c $(comp_options) $< -o $@
+# Make all of the build directories
+$(shell mkdir $(TARGET_DIR) 2> /dev/null)
+$(shell mkdir $(OBJECT_DIR) 2> /dev/null)
+$(foreach dir,$(COMMON),$(shell mkdir $(OBJECT_DIR)/$(dir) 2> /dev/null))
+$(foreach dir,$(TARGETS),$(shell mkdir $(OBJECT_DIR)/$(dir) 2> /dev/null))
 
-$(builddir)/consumer-%.o : consumer/%.c
-	cc -c $(comp_options) $< -o $@
-$(builddir)/server-%.o : server/%.c
-	cc -c $(comp_options) $< -o $@
-$(builddir)/provider-%.o : provider/%.c
-	cc -c $(comp_options) $< -o $@
 
-install : consumer server provider
+# Some targets don't create files
+.PHONY : all clean dirs
 
-clean : 
-	-rm -f $(consumer_objs) $(server_objs) $(provider_objs) $(builddir)/consumer $(builddir)/server $(builddir)/provider
 
-uninstall : 
+# Build all targets
+all : $(foreach tgt,$(TARGETS),$(TARGET_DIR)/$(tgt))
 
+# Build all with debugging symbols
+debug :
+	$(MAKE) CFLAGS=-g
+
+
+# Link Consumer
+$(TARGET_DIR)/consumer : $(COMMON_OBJS) $(CONSUMER_OBJS)
+	$(LD) $(LFLAGS) $(COMMON_OBJS) $(CONSUMER_OBJS) -o $@
+
+# Link Server
+$(TARGET_DIR)/server : $(COMMON_OBJS) $(SERVER_OBJS)
+	$(LD) $(LFLAGS) $(COMMON_OBJS) $(SERVER_OBJS) -o $@
+
+# Link Provider
+$(TARGET_DIR)/provider : $(COMMON_OBJS) $(PROVIDER_OBJS)
+	$(LD) $(LFLAGS) $(COMMON_OBJS) $(PROVIDER_OBJS) -o $@
+
+
+# Compile source
+$(OBJECT_DIR)/%.o : %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+# Clean up the build directories
+clean :
+	-rm -rf $(TARGET_DIR) $(OBJECT_DIR) 2> /dev/null
+
+# Install the executables
+install : all
+
+# Uninstall the executables
+uninstall :

@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <netdb.h>
+#include <sqlite3.h>
 #include "../common/common.h"
 
 #ifdef __APPLE__
@@ -25,9 +26,10 @@
 	#define HANDSHAKE_SIZE SHA256_DIGEST_LENGTH
 #endif
 
-#define NET_VER			1
+#define NET_VER			2
 #define PACKET_SIG		0xB6
 #define PACKET_SIZE_MAX	UINT8_MAX
+#define STRING_SIZE_MAX	(PACKET_SIZE_MAX - sizeof(pk_service_t))
 
 enum pk_type {
 	PK_KEEPALIVE,
@@ -37,8 +39,8 @@ enum pk_type {
 	PK_HANDSHAKE,
 	PK_ADVERTIZE,
 	PK_REQUEST,
-	PK_RESPONSE,
 	PK_SERVICE,
+	PK_RESPONSE,
 	PK_FORWARD,
 	PK_EXITING
 };
@@ -105,11 +107,6 @@ struct pk_advertize {
 	struct _pk_string name; // service name
 };
 
-struct pk_response {
-	struct pk_keepalive _super;
-	uint16_t services;
-};
-
 // a service info response packet - PK_SERVICE
 struct pk_service {
 	struct pk_keepalive _super;
@@ -127,7 +124,6 @@ typedef enum pk_error_code pk_error_code_t;
 typedef struct pk_keepalive pk_keepalive_t;
 typedef struct pk_handshake pk_handshake_t;
 typedef struct pk_advertize pk_advertize_t;
-typedef struct pk_response pk_response_t;
 typedef struct pk_service pk_service_t;
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags);
@@ -135,6 +131,9 @@ void hton_pk(pk_keepalive_t * pk);
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags);
 void ntoh_pk(pk_keepalive_t * pk);
 
+int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa);
+void * get_in_addr(struct sockaddr *sa);
+const char * get_port_service_name(int port, const char * proto);
 int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd);
 int connect_socket(const char * hostname, const char * servname, int * sockfd);
 
@@ -145,9 +144,10 @@ void free_packet(pk_keepalive_t * pk);
 pk_keepalive_t * make_pk_keepalive(pk_type_t type);
 pk_handshake_t * make_pk_handshake(pk_handshake_t * recv);
 pk_advertize_t * make_pk_advertize(unsigned short port, const char * name);
-pk_response_t * make_pk_response(unsigned short services);
-pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name);
-pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name);
+pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name);
+
+void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name);
+void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name);
 
 pk_error_code_t check_version(pk_keepalive_t * pk);
 pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv);
