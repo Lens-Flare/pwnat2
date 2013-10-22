@@ -24,6 +24,8 @@
 	#define pk_hs_hash(dest, src) SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
 #endif
 
+
+
 #pragma mark Packet Transmission/Reception
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags) {
@@ -71,6 +73,7 @@ void hton_pk(pk_keepalive_t * pk) {
 			break;
 	}
 }
+
 
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	ssize_t bytes = 0, total = 0;
@@ -155,11 +158,14 @@ void ntoh_pk(pk_keepalive_t * pk) {
 	}
 }
 
+
+
 #pragma mark - Generic Network Functions
 
 int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
 	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_len, SQLITE_TRANSIENT);
 }
+
 
 void * get_in_addr(struct sockaddr * sa) {
 	if (sa->sa_family == AF_INET)
@@ -170,6 +176,7 @@ void * get_in_addr(struct sockaddr * sa) {
 const char * get_port_service_name(int port, const char * proto) {
 	return getservbyport(port, proto)->s_name;
 }
+
 
 int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd) {
 	int retv, yes;
@@ -268,7 +275,9 @@ int connect_socket(const char * hostname, const char * servname, int * sockfd) {
 	return 0;
 }
 
-#pragma mark - Packet Struct Lifecycle
+
+
+#pragma mark - Packet Lifecycle
 
 pk_keepalive_t * alloc_packet(unsigned long size) {
 	if (size > PACKET_SIZE_MAX)
@@ -302,34 +311,25 @@ void free_packet(pk_keepalive_t * pk) {
 	free(pk);
 }
 
-#pragma mark - Packet Struct Helper Functions
+
+
+#pragma mark - Packet Helper Functions
 
 static void pkcpy_string(struct _pk_string * dest, const char * src) {
 	dest->length = (uint8_t)strlen(src) + 1;
 	strcpy((char *)&dest->data, src);
 }
 
-static void pkcpy_address(struct _pk_address * dest, struct in_addr * src) {
-	dest->family = AF_INET;
-	dest->data[0] = src->s_addr;
-	dest->data[1] = 0;
-	dest->data[2] = 0;
-	dest->data[3] = 0;
+static void pkcpy_address(struct _pk_address * dest, struct sockaddr * src) {
+	dest->family = src->sa_family;
+	
+	for (int i = 0; i < 4 && i < src->sa_len; i++)
+		dest->data[i] = src->sa_data[i];
 }
 
-static void pkcpy_address6(struct _pk_address * dest, struct in6_addr * src) {
-	dest->family = AF_INET6;
-	for (int i = 0; i < 4; i++)
-		#ifdef __APPLE__
-			dest->data[i] = src->__u6_addr.__u6_addr32[i];
-		#elif __linux
-			dest->data[i] = src->__in6_u.__u6_addr32[i];
-		#else
-			#error "Architecture unsupported - in6_addr data unknown"
-		#endif
-}
 
-#pragma mark - Packet Struct Construction
+
+#pragma mark - Packet Construction
 
 pk_keepalive_t * make_pk_keepalive(pk_type_t type) {
 	pk_keepalive_t * pk = alloc_packet(sizeof(pk_keepalive_t));
@@ -378,8 +378,7 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 		return ad;
 	
 	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
-	ad->port = port;
-	pkcpy_string(&ad->name, name);
+	init_pk_advertize(ad, port, name);
 	
 	return ad;
 }
@@ -395,31 +394,30 @@ pk_response_t * make_pk_response(unsigned short services) {
 	return rsp;
 }
 
-pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name) {
+pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name) {
 	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
 		return serv;
 	
 	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
-	pkcpy_address(&serv->address, &address);
-	serv->port = port;
-	pkcpy_string(&serv->name, name);
+	init_pk_service(serv, address, port, name);
 	
 	return serv;
 }
 
-pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name) {
-	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
-	if (!serv)
-		return serv;
-	
-	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
-	pkcpy_address6(&serv->address, &address);
+
+void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name) {
+	ad->port = port;
+	pkcpy_string(&ad->name, name);
+}
+
+void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
+	pkcpy_address(&serv->address, address);
 	serv->port = port;
 	pkcpy_string(&serv->name, name);
-	
-	return serv;
 }
+
+
 
 #pragma mark - Packet Checking
 
@@ -467,6 +465,8 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	
 	return 0;
 }
+
+
 
 #pragma mark - Handshaking
 
