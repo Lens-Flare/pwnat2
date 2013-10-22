@@ -28,7 +28,7 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 
 #pragma mark - SQL Statements
 
-#define CREATE_STMT_STR "CREATE TABLE IF NOT EXISTS Services (Name VARCHAR2(220) NULL, Port INT NON NULL, Family INT NON NULL, Address BLOB NON NULL)"
+#define CREATE_STMT_STR "CREATE TABLE Services (Name VARCHAR2(220) NULL, Port INT NON NULL, Family INT NON NULL, Address BLOB NON NULL)"
 #define CLEAR_STMT_STR "DELETE FROM Services WHERE Address = ?"
 #define INSERT_STMT_STR	"INSERT INTO Services (Name, Port, Family, Address) VALUES (?, ?, ?, ?)"
 #define DELETE_STMT_STR	"DELETE FROM Services WHERE Port = ? AND Address = ?"
@@ -40,9 +40,13 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 
 int main(int argc, const char * argv[]) {
 	int retv = 0;
-	
+	char dbname[L_tmpnam];
 	sqlite3 * db = NULL;
-	retv = sqlite3_open("pwnat2.db", &db);
+	
+	tmpnam(dbname);
+	printf("opening a new database at %s\n", dbname);
+	
+	retv = sqlite3_open(dbname, &db);
 	if (!db) {
 		perror("sqlite3_open: malloc");
 		goto exit;
@@ -70,9 +74,10 @@ int main(int argc, const char * argv[]) {
         return 1;
     }
 	
-	fork_listener(SERVER_PORT, 10, NULL, "pwnat2.db");
+	fork_listener(SERVER_PORT, 10, NULL, dbname);
 	
 exit:
+	unlink(dbname);
 	return retv;
 }
 
@@ -230,7 +235,6 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				retv = sqlite3_bind_int(add_stmt, 3, addr.ss_family);
 				retv = sqlite3_step(add_stmt);
 				retv = sqlite3_reset(add_stmt); if (retv) goto clear;
-				retv = sqlite3_clear_bindings(add_stmt); if (retv) goto clear;
 				
 				break;
 				
