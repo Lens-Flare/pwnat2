@@ -28,11 +28,11 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 
 #pragma mark - SQL Statements
 
-#define CREATE_STMT_STR "CREATE TABLE IF NOT EXISTS Services (Name VARCHAR2(220) NULL, Port INT NON NULL, IPv6 BOOLEAN DEFAULT 0, Address INT NON NULL)"
+#define CREATE_STMT_STR "CREATE TABLE IF NOT EXISTS Services (Name VARCHAR2(220) NULL, Port INT NON NULL, Family INT NON NULL, Address BLOB NON NULL)"
 #define CLEAR_STMT_STR "DELETE FROM Services WHERE Address = ?"
-#define INSERT_STMT_STR	"INSERT INTO Services (Name, Port, IPv6, Address) VALUES (?, ?, ?, ?)"
+#define INSERT_STMT_STR	"INSERT INTO Services (Name, Port, Family, Address) VALUES (?, ?, ?, ?)"
 #define DELETE_STMT_STR	"DELETE FROM Services WHERE Port = ? AND Address = ?"
-#define SELECT_STMT_STR	"SELECT Name, Port, IPv6, Address FROM Services"
+#define SELECT_STMT_STR	"SELECT Name, Port, Family, Address, LENGTH(Address) as Length FROM Services"
 
 
 
@@ -129,7 +129,7 @@ int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, in
 	return 0;
 }
 int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
-	int retv = 0;
+	ssize_t retv = 0;
 	char buf[PACKET_SIZE_MAX];
 	unsigned char is_provider = 0;
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
@@ -149,15 +149,6 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 		goto close;
 	} else if (retv)
 		goto sql_fail;
-	
-	retv = sqlite3_prepare_v2(db, INSERT_STMT_STR, -1, &add_stmt,   NULL); if (retv) goto sql_fail;
-	retv = sqlite3_prepare_v2(db, DELETE_STMT_STR, -1, &del_stmt,   NULL); if (retv) goto sql_fail;
-	retv = sqlite3_prepare_v2(db, SELECT_STMT_STR, -1, &list_stmt,  NULL); if (retv) goto sql_fail;
-	retv = sqlite3_prepare_v2(db, CLEAR_STMT_STR,  -1, &clear_stmt, NULL); if (retv) goto sql_fail;
-	
-	retv = sqlite3_bind_address(add_stmt, 4, (struct sockaddr *)&addr); if (retv) goto sql_fail;
-	retv = sqlite3_bind_address(del_stmt, 2, (struct sockaddr *)&addr); if (retv) goto sql_fail;
-	retv = sqlite3_bind_address(clear_stmt, 1, (struct sockaddr *)&addr); if (retv) goto sql_fail;
 	
 	while (1) {
 		pk_keepalive_t * bad;
@@ -198,6 +189,16 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				break;
 				
 			case PK_ADVERTIZE:
+				if (!is_provider) {
+					retv = sqlite3_prepare_v2(db, INSERT_STMT_STR, -1, &add_stmt,   NULL); if (retv) goto sql_fail;
+					retv = sqlite3_prepare_v2(db, DELETE_STMT_STR, -1, &del_stmt,   NULL); if (retv) goto sql_fail;
+					retv = sqlite3_prepare_v2(db, CLEAR_STMT_STR,  -1, &clear_stmt, NULL); if (retv) goto sql_fail;
+					
+					retv = sqlite3_bind_address(add_stmt, 4, (struct sockaddr *)&addr); if (retv) goto sql_fail;
+					retv = sqlite3_bind_address(del_stmt, 2, (struct sockaddr *)&addr); if (retv) goto sql_fail;
+					retv = sqlite3_bind_address(clear_stmt, 1, (struct sockaddr *)&addr); if (retv) goto sql_fail;
+				}
+				
 				is_provider = 1;
 				
 				pk_advertize_t * ad = (pk_advertize_t *)pk;
@@ -226,7 +227,7 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				if (retv) goto sql_fail;
 				
 				retv = sqlite3_bind_int(add_stmt, 2, ad->port); if (retv) goto clear;
-				retv = sqlite3_bind_int(add_stmt, 3, addr.ss_family == AF_INET6);
+				retv = sqlite3_bind_int(add_stmt, 3, addr.ss_family);
 				retv = sqlite3_step(add_stmt);
 				retv = sqlite3_reset(add_stmt); if (retv) goto clear;
 				retv = sqlite3_clear_bindings(add_stmt); if (retv) goto clear;
@@ -234,9 +235,44 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				break;
 				
 			case PK_REQUEST:
+				if (!list_stmt) {
+					retv = sqlite3_prepare_v2(db, SELECT_STMT_STR, -1, &list_stmt, NULL); if (retv) goto sql_fail;
+				}
+				
 				printf("Client requesting services\n");
 				
-				pk_service_t * serv = alloc_packet(PACKET_SIZE_MAX);
+				pk_service_t * serv = (pk_service_t *)alloc_packet(PACKET_SIZE_MAX); if (!serv) goto clear;
+				
+				while ((retv = sqlite3_step(list_stmt)) == SQLITE_ROW) {
+					const char * name = (const char *)sqlite3_column_text(list_stmt, 0);
+					int port = sqlite3_column_int(list_stmt, 1);
+					sa_family_t family = sqlite3_column_int(list_stmt, 2);
+					const void * address = sqlite3_column_blob(list_stmt, 3);
+					int length = sqlite3_column_int(list_stmt, 4);
+					
+					init_pk_service(serv, NULL, port, name);
+					serv->address.family = family;
+					for (int i = 0; i < 4 && i < length; i++)
+						serv->address.data[i] = ((uint32_t *)address)[i];
+					
+					retv = pk_send(acptfd, (pk_keepalive_t *)serv, 0);
+					if (retv < 0) {
+						free_packet((pk_keepalive_t *)serv);
+						goto clear;
+					}
+				}
+				retv = sqlite3_reset(add_stmt); if (retv) goto clear;
+				
+				free_packet((pk_keepalive_t *)serv);
+				
+				pk_keepalive_t * pk = make_pk_keepalive(PK_RESPONSE);
+				if (!pk)
+					goto clear;
+				retv = pk_send(acptfd, pk, 0);
+				free_packet(pk);
+				if (retv < 0) {
+					goto clear;
+				}
 				
 				break;
 				
@@ -252,8 +288,8 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 			default:
 				if ((retv = !(bad = make_pk_keepalive(PK_BADPACKET))))
 					goto clear;
-				
-				if ((retv = pk_send(acptfd, bad, 0) < 0)) {
+				retv = pk_send(acptfd, bad, 0);
+				if (retv < 0) {
 					free_packet(bad);
 					goto clear;
 				}
@@ -275,7 +311,7 @@ close:
 	sqlite3_finalize(add_stmt);
 	sqlite3_close(db);
 	close(acptfd);
-	return retv;
+	return (int)retv;
 sql_fail:
 	fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
 	goto clear;

@@ -18,31 +18,32 @@
 
 int main(int argc, const char * argv[])
 {
-	pk_service_t * srvs;
-	int numSrvs;
+	service_list_t * srvs;
+	int ret;
 	char s[INET6_ADDRSTRLEN];
 	
-	numSrvs = ask_server_for_services(&srvs);
+	ret = ask_server_for_services(&srvs);
 	
-	for(int i=0; i<numSrvs; i++)
+	for (service_list_t * current = srvs; current && current->serv.pk._super.type != PK_RESPONSE; current = current->next)
 	{
-		inet_ntop(srvs[i].address.family, &srvs[i].address.data, s, sizeof s);
-		printf("%s @ %s:%d", srvs[i].name.data, s, srvs[i].port);
+		inet_ntop(current->serv.pk.address.family, &current->serv.pk.address.data, s, sizeof(s));
+		printf("%s @ %s:%d\n", (char *)&current->serv.pk.name.data, s, current->serv.pk.port);
+	}
+	
+	for (service_list_t * old, * current = srvs; current; free(old)) {
+		old = current;
+		current = current->next;
 	}
 	
 	return 0;
 }
 
-int ask_server_for_services(pk_service_t ** srvs)
+int ask_server_for_services(service_list_t ** head)
 {
 	int sockfd;
-	int num_serv;
-	int ret;
-	int i = -1;
+	int ret = 0;
 //	int paclen = sizeof(pk_keepalive_t);
 	pk_keepalive_t * packet;
-	char buf[PACKET_SIZE_MAX];
-	pk_keepalive_t* rec_pk = (pk_keepalive_t*) buf;
 	
 	
 	ret = connect_socket(NULL, SERVER_PORT, &sockfd);
@@ -67,52 +68,52 @@ int ask_server_for_services(pk_service_t ** srvs)
 	}
 	
 //	Send the request.
-	ret = pk_send(sockfd, packet, 0);
+	ret = (int)pk_send(sockfd, packet, 0);
 	if(ret < 0)
 	{
 //		perror("consumer: pk_send");
 		goto free_pk;
 	}
 	
-//	Receive the response
-	ret = pk_recv(sockfd, buf, 0);
-	if(ret < 0)
-	{
-//		perror("consumer: pk_recv");
-		goto free_pk;
-	}
-	ret = check_version(rec_pk);
-	if(ret)
-	{
-//		perror("consumer: check_version");
-		goto free_pk;
-	}
-	
-	num_serv = ((pk_response_t*)rec_pk)->services;
-	
-//	malloc() the required space.
-	*srvs = malloc(PACKET_SIZE_MAX * num_serv);
-	if(!*srvs)
-	{
-		perror("consumer: malloc");
-		goto free_pk;
-	}
-	
-//	Loop for recv and copy
-	for(i=0; i<num_serv; i++)
-	{
-		ret = pk_recv(sockfd, ((void*)*srvs+256*i), 0);
+	service_list_t * current;
+	*head = NULL;
+	do {
+		if (!*head)
+			*head = current = calloc(1, sizeof(service_list_t));
+		else
+			current = current->next = calloc(1, sizeof(service_list_t));
+		
+		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, 0);
 		if(ret < 0)
 		{
-//			perror("consumer: pk_recv");
-			goto free_pk;
+			//		perror("consumer: pk_recv");
+			goto free_list;
 		}
-	}
+		ret = check_version((pk_keepalive_t *)&current->serv.pk);
+		if(ret)
+		{
+			//		perror("consumer: check_version");
+			goto free_list;
+		}
+	} while (current && current->serv.pk._super.type == PK_SERVICE);
+	
+	if (!current)
+		perror("calloc");
+	
+	if (current->serv.pk._super.type != PK_RESPONSE)
+		fprintf(stderr, "The service list did not end with a response packet\n");
 	
 free_pk:
 	free(packet);
 close_sock:
 	close(sockfd);
 exit:
-	return i;
+	return ret;
+free_list:
+	current = *head;
+	for (service_list_t * old; current; free(old)) {
+		old = current;
+		current = current->next;
+	}
+	goto free_pk;
 }
