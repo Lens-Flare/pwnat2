@@ -26,10 +26,10 @@
 	#define HANDSHAKE_SIZE SHA256_DIGEST_LENGTH
 #endif
 
-#define NET_VER			1
+#define NET_VER			2
 #define PACKET_SIG		0xB6
 #define PACKET_SIZE_MAX	UINT8_MAX
-#define STRING_SIZE_MAX	(PACKET_SIZE_MAX - sizeof(pk_service))
+#define STRING_SIZE_MAX	(PACKET_SIZE_MAX - sizeof(pk_service_t))
 
 enum pk_type {
 	PK_KEEPALIVE,
@@ -39,8 +39,8 @@ enum pk_type {
 	PK_HANDSHAKE,
 	PK_ADVERTIZE,
 	PK_REQUEST,
-	PK_RESPONSE,
 	PK_SERVICE,
+	PK_RESPONSE,
 	PK_FORWARD,
 	PK_EXITING
 };
@@ -107,11 +107,6 @@ struct pk_advertize {
 	struct _pk_string name; // service name
 };
 
-struct pk_response {
-	struct pk_keepalive _super;
-	uint16_t services;
-};
-
 // a service info response packet - PK_SERVICE
 struct pk_service {
 	struct pk_keepalive _super;
@@ -129,7 +124,6 @@ typedef enum pk_error_code pk_error_code_t;
 typedef struct pk_keepalive pk_keepalive_t;
 typedef struct pk_handshake pk_handshake_t;
 typedef struct pk_advertize pk_advertize_t;
-typedef struct pk_response pk_response_t;
 typedef struct pk_service pk_service_t;
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags);
@@ -150,7 +144,6 @@ void free_packet(pk_keepalive_t * pk);
 pk_keepalive_t * make_pk_keepalive(pk_type_t type);
 pk_handshake_t * make_pk_handshake(pk_handshake_t * recv);
 pk_advertize_t * make_pk_advertize(unsigned short port, const char * name);
-pk_response_t * make_pk_response(unsigned short services);
 pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name);
 
 void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name);

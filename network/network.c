@@ -61,9 +61,6 @@ void hton_pk(pk_keepalive_t * pk) {
 			((pk_advertize_t *)pk)->port = htons(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = htonl(((pk_advertize_t *)pk)->reserved);
 			break;
-		case PK_RESPONSE:
-			((pk_response_t *)pk)->services = htons(((pk_response_t *)pk)->services);
-			break;
 		case PK_SERVICE:
 			hton_addr(&(((pk_service_t *)pk)->address));
 			((pk_service_t *)pk)->port = htons(((pk_service_t *)pk)->port);
@@ -144,9 +141,6 @@ void ntoh_pk(pk_keepalive_t * pk) {
 		case PK_ADVERTIZE:
 			((pk_advertize_t *)pk)->port = ntohs(((pk_advertize_t *)pk)->port);
 			((pk_advertize_t *)pk)->reserved = ntohl(((pk_advertize_t *)pk)->reserved);
-			break;
-		case PK_RESPONSE:
-			((pk_response_t *)pk)->services = ntohs(((pk_response_t *)pk)->services);
 			break;
 		case PK_SERVICE:
 			ntoh_addr(&(((pk_service_t *)pk)->address));
@@ -382,17 +376,6 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	return ad;
 }
 
-pk_response_t * make_pk_response(unsigned short services) {
-	pk_response_t * rsp = (pk_response_t *)alloc_packet(sizeof(pk_response_t));
-	if (!rsp)
-		return rsp;
-	
-	init_packet((pk_keepalive_t *)rsp, PK_RESPONSE);
-	rsp->services = services;
-	
-	return rsp;
-}
-
 pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name) {
 	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
@@ -410,7 +393,7 @@ void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * na
 	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
 	
 	ad->port = port;
-	pkcpy_string(&ad->name, name);
+	if (name) pkcpy_string(&ad->name, name);
 }
 
 void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
@@ -418,9 +401,9 @@ void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned sh
 	
 	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
 	
-	pkcpy_address(&serv->address, address);
+	if (address) pkcpy_address(&serv->address, address);
 	serv->port = port;
-	pkcpy_string(&serv->name, name);
+	if (name) pkcpy_string(&serv->name, name);
 }
 
 

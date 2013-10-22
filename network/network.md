@@ -33,14 +33,13 @@ server, providers, and consumers. There are a number of types of packets:
   * Request - used by the consumer to request the list of services from the
   server.
   
-  * Response - used by the server to tell the consumer how many Service packets
-  to expect. It adds a two byte field containing this number. *It is the initial
-  response to a request packet*.
-  
   * Service - used by the server to inform the consumer the consumer of avaiable
   services. It adds an address field, a two byte field for the port number, a
   four byte field reserved for future use, and a name field. *See the Other
   Structures section below*. **The name field must be null terminated**.
+  
+  * Response - used by the server to tell the consumer all of the service
+  packets have been sent.
   
   * Forward - used to forward captured packets. It has not been defined yet.
   
