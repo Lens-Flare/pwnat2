@@ -14,6 +14,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#include <sqlite3.h>
 
 #include "network.h"
 
@@ -22,6 +23,8 @@
 #else
 	#define pk_hs_hash(dest, src) SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
 #endif
+
+
 
 #pragma mark Packet Transmission/Reception
 
@@ -71,6 +74,7 @@ void hton_pk(pk_keepalive_t * pk) {
 	}
 }
 
+
 ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	ssize_t bytes = 0, total = 0;
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
@@ -94,22 +98,35 @@ ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 	if (bytes < 0)
 		goto error;
 	
+	if (pk->size == total)
+		goto done;
+	else if (pk->size < total)
+		goto failbytes;
+	
 	total += bytes = recv(sockfd, buf + total, pk->size - total, flags);
 	
-	if (bytes < 0) {
-		perror("recv");
-	} else if (total != pk->size) {
-		fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
-		goto fail;
-	}
+	if (bytes < 0)
+		goto error;
+	else if (total != pk->size)
+		goto failbytes;
 	
+done:
 	ntoh_pk(pk);
-	
+	if (pk->type == PK_ADVERTIZE || pk->type == PK_SERVICE) {
+		struct _pk_string * str = (pk->type = PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
+		
+		if (str->length > 1 || (str->data[0] != '-' && str->data[0] != '+'))
+			str->data[str->length - 1] = 0;
+	}
 exit:
 	return total;
+	
 error:
 	perror("recv");
 	goto exit;
+	
+failbytes:
+	fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
 fail:
 	total = -1;
 	goto exit;
@@ -141,16 +158,25 @@ void ntoh_pk(pk_keepalive_t * pk) {
 	}
 }
 
+
+
 #pragma mark - Generic Network Functions
 
-void *get_in_addr(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET) {
+int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
+	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_len, SQLITE_TRANSIENT);
+}
+
+
+void * get_in_addr(struct sockaddr * sa) {
+	if (sa->sa_family == AF_INET)
 		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-	
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
+
+const char * get_port_service_name(int port, const char * proto) {
+	return getservbyport(port, proto)->s_name;
+}
+
 
 int listen_socket(const char * hostname, const char * servname, int backlog, int * sockfd) {
 	int retv, yes;
@@ -249,7 +275,9 @@ int connect_socket(const char * hostname, const char * servname, int * sockfd) {
 	return 0;
 }
 
-#pragma mark - Packet Struct Lifecycle
+
+
+#pragma mark - Packet Lifecycle
 
 pk_keepalive_t * alloc_packet(unsigned long size) {
 	if (size > PACKET_SIZE_MAX)
@@ -283,34 +311,25 @@ void free_packet(pk_keepalive_t * pk) {
 	free(pk);
 }
 
-#pragma mark - Packet Struct Helper Functions
+
+
+#pragma mark - Packet Helper Functions
 
 static void pkcpy_string(struct _pk_string * dest, const char * src) {
 	dest->length = (uint8_t)strlen(src) + 1;
 	strcpy((char *)&dest->data, src);
 }
 
-static void pkcpy_address(struct _pk_address * dest, struct in_addr * src) {
-	dest->family = AF_INET;
-	dest->data[0] = src->s_addr;
-	dest->data[1] = 0;
-	dest->data[2] = 0;
-	dest->data[3] = 0;
+static void pkcpy_address(struct _pk_address * dest, struct sockaddr * src) {
+	dest->family = src->sa_family;
+	
+	for (int i = 0; i < 4 && i < src->sa_len; i++)
+		dest->data[i] = src->sa_data[i];
 }
 
-static void pkcpy_address6(struct _pk_address * dest, struct in6_addr * src) {
-	dest->family = AF_INET6;
-	for (int i = 0; i < 4; i++)
-		#ifdef __APPLE__
-			dest->data[i] = src->__u6_addr.__u6_addr32[i];
-		#elif __linux
-			dest->data[i] = src->__in6_u.__u6_addr32[i];
-		#else
-			#error "Architecture unsupported - in6_addr data unknown"
-		#endif
-}
 
-#pragma mark - Packet Struct Construction
+
+#pragma mark - Packet Construction
 
 pk_keepalive_t * make_pk_keepalive(pk_type_t type) {
 	pk_keepalive_t * pk = alloc_packet(sizeof(pk_keepalive_t));
@@ -358,9 +377,7 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	if (!ad)
 		return ad;
 	
-	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
-	ad->port = port;
-	pkcpy_string(&ad->name, name);
+	init_pk_advertize(ad, port, name);
 	
 	return ad;
 }
@@ -376,31 +393,37 @@ pk_response_t * make_pk_response(unsigned short services) {
 	return rsp;
 }
 
-pk_service_t * make_pk_service(struct in_addr address, unsigned short port, const char * name) {
+pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name) {
 	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
 		return serv;
 	
-	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
-	pkcpy_address(&serv->address, &address);
-	serv->port = port;
-	pkcpy_string(&serv->name, name);
+	init_pk_service(serv, address, port, name);
 	
 	return serv;
 }
 
-pk_service_t * make_pk_service6(struct in6_addr address, unsigned short port, const char * name) {
-	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
-	if (!serv)
-		return serv;
+
+void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name) {
+	ad->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
 	
-	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
-	pkcpy_address6(&serv->address, &address);
+	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
+	
+	ad->port = port;
+	pkcpy_string(&ad->name, name);
+}
+
+void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
+	serv->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
+	
+	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
+	
+	pkcpy_address(&serv->address, address);
 	serv->port = port;
 	pkcpy_string(&serv->name, name);
-	
-	return serv;
 }
+
+
 
 #pragma mark - Packet Checking
 
@@ -448,6 +471,8 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	
 	return 0;
 }
+
+
 
 #pragma mark - Handshaking
 

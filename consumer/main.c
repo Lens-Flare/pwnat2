@@ -54,6 +54,7 @@ int ask_server_for_services(pk_service_t ** srvs)
 	
 	ret = send_handshake(sockfd);
 	if (ret) {
+		fprintf(stderr, "Bad handshake\n");
 		goto close_sock;
 	}
 	
