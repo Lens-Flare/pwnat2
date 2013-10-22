@@ -19,6 +19,7 @@ DerivedData
 *~
 \#*\#
 *.swp
+*.xcworkspace
 
 #CocoaPods
 Pods
