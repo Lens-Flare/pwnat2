@@ -377,7 +377,6 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	if (!ad)
 		return ad;
 	
-	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
 	init_pk_advertize(ad, port, name);
 	
 	return ad;
@@ -399,7 +398,6 @@ pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, c
 	if (!serv)
 		return serv;
 	
-	init_packet((pk_keepalive_t *)serv, PK_ADVERTIZE);
 	init_pk_service(serv, address, port, name);
 	
 	return serv;
@@ -407,11 +405,19 @@ pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, c
 
 
 void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name) {
+	ad->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
+	
+	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
+	
 	ad->port = port;
 	pkcpy_string(&ad->name, name);
 }
 
 void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
+	serv->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
+	
+	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
+	
 	pkcpy_address(&serv->address, address);
 	serv->port = port;
 	pkcpy_string(&serv->name, name);
