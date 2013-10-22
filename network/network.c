@@ -157,7 +157,7 @@ void ntoh_pk(pk_keepalive_t * pk) {
 #pragma mark - Generic Network Functions
 
 int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
-	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_len, SQLITE_TRANSIENT);
+	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_family == AF_INET6 ? 16 : 4, SQLITE_TRANSIENT);
 }
 
 
@@ -397,7 +397,7 @@ void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * na
 }
 
 void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
-	serv->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
+	serv->_super.size = sizeof(pk_service_t) + strlen(name) + 1;
 	
 	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
 	
