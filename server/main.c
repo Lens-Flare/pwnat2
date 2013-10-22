@@ -15,12 +15,119 @@
 
 #include "../network/network.h"
 
+
+
+#pragma mark Prototypes
+
+int fork_listener(const char * port, int backlog, pid_t * cpid, const char * dbname);
+int do_listener(int sockfd, const char * dbname);
+int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname);
+int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname);
+
+
+
+#pragma mark - SQL Statements
+
 #define CREATE_STMT_STR "CREATE TABLE IF NOT EXISTS Services (Name VARCHAR2(220) NULL, Port INT NON NULL, IPv6 BOOLEAN DEFAULT 0, Address INT NON NULL)"
 #define CLEAR_STMT_STR "DELETE FROM Services WHERE Address = ?"
 #define INSERT_STMT_STR	"INSERT INTO Services (Name, Port, IPv6, Address) VALUES (?, ?, ?, ?)"
 #define DELETE_STMT_STR	"DELETE FROM Services WHERE Port = ? AND Address = ?"
 #define SELECT_STMT_STR	"SELECT Name, Port, IPv6, Address FROM Services"
 
+
+
+#pragma mark - Main
+
+int main(int argc, const char * argv[]) {
+	int retv = 0;
+	
+	sqlite3 * db = NULL;
+	retv = sqlite3_open("pwnat2.db", &db);
+	if (!db) {
+		perror("sqlite3_open: malloc");
+		goto exit;
+	} else if (retv) {
+		fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		goto exit;
+	}
+	
+	retv = sqlite3_exec(db, CREATE_STMT_STR, NULL, NULL, NULL);
+	if (retv) {
+		fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
+		sqlite3_close(db);
+		goto exit;
+	}
+	
+	sqlite3_close(db);
+	
+    struct sigaction sa;
+    sa.sa_handler = _waitpid_sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("sigaction");
+        return 1;
+    }
+	
+	fork_listener(SERVER_PORT, 10, NULL, "pwnat2.db");
+	
+exit:
+	return retv;
+}
+
+
+
+#pragma mark - Connection Listener
+
+int fork_listener(const char * port, int backlog, pid_t * cpid, const char * dbname) {
+	int sockfd;
+	
+	if (listen_socket(NULL, (char *)port, backlog, &sockfd)) {
+		return 1;
+	}
+	
+	if (cpid == NULL || !(*cpid = fork()))
+		exit(do_listener(sockfd, dbname));
+	
+	return 0;
+}
+int do_listener(int sockfd, const char * dbname) {
+	struct sockaddr_storage addr;
+	socklen_t addrlen;
+	int acptfd;
+    struct sigaction sa;
+	
+    sa.sa_handler = _waitpid_sigchld_handler; // reap all dead processes
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+        perror("sigaction");
+        return 1;
+    }
+	
+	while (1) {
+		if ((acptfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen)) < 0) {
+			perror("accept");
+			continue;
+		}
+		
+		fork_handler(sockfd, addr, addrlen, acptfd, dbname);
+		close(acptfd);
+	}
+	
+	return 0;
+}
+
+
+
+#pragma mark - Connection Handler
+
+int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
+	if (!fork())
+		exit(do_handler(sockfd, addr, addrlen, acptfd, dbname));
+	return 0;
+}
 int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
 	int retv = 0;
 	char buf[PACKET_SIZE_MAX];
@@ -128,7 +235,9 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				
 			case PK_REQUEST:
 				printf("Client requesting services\n");
-				// send list
+				
+				pk_service_t * serv = alloc_packet(PACKET_SIZE_MAX);
+				
 				break;
 				
 			case PK_FORWARD:
@@ -171,89 +280,3 @@ sql_fail:
 	fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
 	goto clear;
 }
-
-int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
-	if (!fork())
-		exit(do_handler(sockfd, addr, addrlen, acptfd, dbname));
-	return 0;
-}
-
-int do_listener(int sockfd, const char * dbname) {
-	struct sockaddr_storage addr;
-	socklen_t addrlen;
-	int acptfd;
-    struct sigaction sa;
-	
-    sa.sa_handler = _waitpid_sigchld_handler; // reap all dead processes
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        return 1;
-    }
-	
-	while (1) {
-		if ((acptfd = accept(sockfd, (struct sockaddr *)&addr, &addrlen)) < 0) {
-			perror("accept");
-			continue;
-		}
-		
-		fork_handler(sockfd, addr, addrlen, acptfd, dbname);
-		close(acptfd);
-	}
-	
-	return 0;
-}
-
-int fork_listener(const char * port, int backlog, pid_t * cpid, const char * dbname) {
-	int sockfd;
-	
-	if (listen_socket(NULL, (char *)port, backlog, &sockfd)) {
-		return 1;
-	}
-	
-	if (cpid == NULL || !(*cpid = fork()))
-		exit(do_listener(sockfd, dbname));
-	
-	return 0;
-}
-
-int main(int argc, const char * argv[])
-{
-	int retv = 0;
-	
-	sqlite3 * db = NULL;
-	retv = sqlite3_open("pwnat2.db", &db);
-	if (!db) {
-		perror("sqlite3_open: malloc");
-		goto exit;
-	} else if (retv) {
-		fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		goto exit;
-	}
-	
-	retv = sqlite3_exec(db, CREATE_STMT_STR, NULL, NULL, NULL);
-	if (retv) {
-		fprintf(stderr, "SQLite error: %s\n", sqlite3_errmsg(db));
-		sqlite3_close(db);
-		goto exit;
-	}
-	
-	sqlite3_close(db);
-	
-    struct sigaction sa;
-    sa.sa_handler = _waitpid_sigchld_handler; // reap all dead processes
-    sigemptyset(&sa.sa_mask);
-    sa.sa_flags = SA_RESTART;
-    if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-        perror("sigaction");
-        return 1;
-    }
-	
-	fork_listener(SERVER_PORT, 10, NULL, "pwnat2.db");
-	
-exit:
-	return retv;
-}
-
