@@ -168,7 +168,8 @@ void * get_in_addr(struct sockaddr * sa) {
 }
 
 const char * get_port_service_name(int port, const char * proto) {
-	return getservbyport(port, proto)->s_name;
+	struct servent * serv = getservbyport(htons(port), proto);
+	return serv ? serv->s_name : NULL;
 }
 
 
