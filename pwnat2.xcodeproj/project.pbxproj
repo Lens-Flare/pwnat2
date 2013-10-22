@@ -116,6 +116,7 @@
 		42B8EA6E180F449C0032EA4B /* network.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = network.h; sourceTree = "<group>"; };
 		42B8EA6F180F6A2B0032EA4B /* libsqlite3.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.0.dylib; path = usr/lib/libsqlite3.0.dylib; sourceTree = SDKROOT; };
 		42B8EA74180F6A5C0032EA4B /* libpcap.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpcap.dylib; path = usr/lib/libpcap.dylib; sourceTree = SDKROOT; };
+		42D939C11816095300FC631F /* network.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = network.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -213,6 +214,7 @@
 			children = (
 				42B8EA6E180F449C0032EA4B /* network.h */,
 				42B8EA6A180F44330032EA4B /* network.c */,
+				42D939C11816095300FC631F /* network.md */,
 			);
 			path = network;
 			sourceTree = "<group>";
