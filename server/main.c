@@ -129,7 +129,7 @@ int do_listener(int sockfd, const char * dbname) {
 #pragma mark - Connection Handler
 
 int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
-	if (!fork())
+//	if (!fork())
 		exit(do_handler(sockfd, addr, addrlen, acptfd, dbname));
 	return 0;
 }
@@ -205,12 +205,11 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				}
 				
 				is_provider = 1;
-				
 				pk_advertize_t * ad = (pk_advertize_t *)pk;
-				printf("Provider advertizing %s on %d\n", (char *)&ad->name.data, ad->port);
 				
 				// if the name is length 1 and the only byte is -, remove the service
 				if (ad->name.length == 1 && ad->name.data[0] == '-') {
+					printf("Service no longer accessible on port %d of provider\n", ad->port);
 					retv = sqlite3_bind_int(del_stmt, 1, ad->port); if (retv) goto clear;
 					retv = sqlite3_step(del_stmt);
 					retv = sqlite3_reset(del_stmt); if (retv) goto clear;
@@ -221,9 +220,14 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 				const char * name = NULL;
 				
 				if (ad->name.length == 1 && ad->name.data[0] == '+')
-					name = get_port_service_name(ad->port, "TCP");
+					name = get_port_service_name(ad->port, NULL);
 				else
 					name = (char *)&ad->name.data;
+				
+				if (name)
+					printf("Provider advertizing %s on %d\n", name, ad->port);
+				else
+					printf("Provider advertizing %d\n", ad->port);
 				
 				if (name)
 					retv = sqlite3_bind_text(add_stmt, 1, name, -1, SQLITE_TRANSIENT);

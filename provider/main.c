@@ -56,7 +56,8 @@ int main(int argc, const char * argv[]) {
 		init_pk_advertize(ad, 7777, "Terraria");
 		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv < 0) goto free;
 		
-		init_pk_advertize(ad, 80, "HTTP");
+		init_pk_advertize(ad, 80, "");
+		ad->name.data[0] = '+';
 		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv < 0) goto free;
 		
 		init_pk_advertize(ad, 22, "SSH");
