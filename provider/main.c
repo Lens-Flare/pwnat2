@@ -31,9 +31,15 @@ int do_keepalive(void * param) {
 
 int main(int argc, const char * argv[]) {
 	pid_t keepalive_pid;
-	int sockfd, retv = 0;
+	int sockfd;
+	ssize_t retv = 0;
 	char buf[256];
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
+	pk_advertize_t * ad;
+	
+	ad = (pk_advertize_t *)alloc_packet(PACKET_SIZE_MAX);
+	if ((retv = !ad))
+		goto exit;
 	
 	if ((retv = connect_socket(NULL, SERVER_PORT, &sockfd)))
 		goto exit;
@@ -47,29 +53,30 @@ int main(int argc, const char * argv[]) {
 	
 	// send all of the services
 	{
-		pk_advertize_t * ad = make_pk_advertize(7777, "Terraria");
-		pk_send(sockfd, (pk_keepalive_t *)ad, 0);
-		free_packet((pk_keepalive_t *)ad);
+		init_pk_advertize(ad, 7777, "Terraria");
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
 		
-		ad = make_pk_advertize(80, "HTTP");
-		pk_send(sockfd, (pk_keepalive_t *)ad, 0);
-		free_packet((pk_keepalive_t *)ad);
+		init_pk_advertize(ad, 80, "HTTP");
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
 		
-		ad = make_pk_advertize(22, "SSH");
-		pk_send(sockfd, (pk_keepalive_t *)ad, 0);
-		free_packet((pk_keepalive_t *)ad);
+		init_pk_advertize(ad, 22, "SSH");
+		retv = pk_send(sockfd, (pk_keepalive_t *)ad, 0); if (retv) goto free;
 	}
 	
-	while (1) {
-		// pk == buf
-		pk_recv(sockfd, buf, 0);
+free:
+	free_packet((pk_keepalive_t *)ad);
+	
+	while (retv) {
+		retv = pk_recv(sockfd, buf, 0);
 		
-		if ((retv = check_version(pk)))
-			goto close;
+		if (retv <= 0)
+			break;
+		
+		retv = check_version(pk);
 	}
 	
 close:
 	close(sockfd);
 exit:
-	return retv;
+	return (int)retv;
 }
