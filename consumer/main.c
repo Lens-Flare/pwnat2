@@ -46,7 +46,7 @@ int ask_server_for_services(service_list_t ** head)
 	pk_keepalive_t * packet;
 	
 	
-	ret = connect_socket(NULL, SERVER_PORT, &sockfd);
+	ret = connect_socket("localhost", SERVER_PORT, &sockfd);
 	if(ret)
 	{
 //		perror("consumer: open_socket");

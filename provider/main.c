@@ -41,7 +41,7 @@ int main(int argc, const char * argv[]) {
 	if ((retv = !ad))
 		goto exit;
 	
-	if ((retv = connect_socket(NULL, SERVER_PORT, &sockfd)))
+	if ((retv = connect_socket("localhost", SERVER_PORT, &sockfd)))
 		goto exit;
 	
 	if ((retv = send_handshake(sockfd))) {

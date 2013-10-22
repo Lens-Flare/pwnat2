@@ -110,7 +110,7 @@ ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
 done:
 	ntoh_pk(pk);
 	if (pk->type == PK_ADVERTIZE || pk->type == PK_SERVICE) {
-		struct _pk_string * str = (pk->type = PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
+		struct _pk_string * str = (pk->type == PK_ADVERTIZE) ? &((pk_advertize_t *)pk)->name : &((pk_service_t *)pk)->name;
 		
 		if (str->length > 1 || (str->data[0] != '-' && str->data[0] != '+'))
 			str->data[str->length - 1] = 0;

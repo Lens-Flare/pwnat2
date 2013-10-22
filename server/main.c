@@ -88,7 +88,7 @@ exit:
 int fork_listener(const char * port, int backlog, pid_t * cpid, const char * dbname) {
 	int sockfd;
 	
-	if (listen_socket(NULL, (char *)port, backlog, &sockfd)) {
+	if (listen_socket("localhost", (char *)port, backlog, &sockfd)) {
 		return 1;
 	}
 	
