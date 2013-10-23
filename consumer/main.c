@@ -12,9 +12,18 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "consumer.h"
-#include "../network/network.h"
+#include "../common/network.h"
 #include "../common/common.h"
+
+typedef struct service_list {
+	struct service_list * next;
+	union {
+		char buf[PACKET_SIZE_MAX];
+		pk_service_t pk;
+	} serv;
+} service_list_t;
+
+int ask_server_for_services(service_list_t ** head);
 
 int main(int argc, const char * argv[])
 {
