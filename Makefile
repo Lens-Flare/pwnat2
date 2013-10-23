@@ -10,7 +10,7 @@ override CFLAGS := -O2 --std=gnu11 -Wall -Wno-unknown-pragmas $(CFLAGS)
 UNAME = $(shell uname)
 
 # Targets etc
-COMMON = network common
+COMMON = common
 TARGETS = consumer server provider
 
 # Build Directories

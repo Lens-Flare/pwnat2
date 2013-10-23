@@ -13,7 +13,7 @@
 #include <sqlite3.h>
 #include <unistd.h>
 
-#include "../network/network.h"
+#include "../common/network.h"
 
 
 
@@ -129,7 +129,7 @@ int do_listener(int sockfd, const char * dbname) {
 #pragma mark - Connection Handler
 
 int fork_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int acptfd, const char * dbname) {
-//	if (!fork())
+	if (!fork())
 		exit(do_handler(sockfd, addr, addrlen, acptfd, dbname));
 	return 0;
 }
@@ -143,7 +143,7 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 	
 	close(sockfd);
 	
-	if ((retv = recv_handshake(acptfd))) {
+	if ((retv = recv_handshake(acptfd, DEFAULT_TIMEOUT))) {
 		fprintf(stderr, "Bad handshake\n");
 		goto close;
 	}
@@ -158,7 +158,7 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 	while (1) {
 		pk_keepalive_t * bad;
 		
-		if ((retv = pk_recv(acptfd, buf, 0) < 0))
+		if ((retv = pk_recv(acptfd, buf, DEFAULT_TIMEOUT, 0) < 0))
 			goto clear;
 		
 		if ((retv = check_version(pk))) {

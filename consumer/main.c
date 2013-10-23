@@ -12,9 +12,18 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "consumer.h"
-#include "../network/network.h"
+#include "../common/network.h"
 #include "../common/common.h"
+
+typedef struct service_list {
+	struct service_list * next;
+	union {
+		char buf[PACKET_SIZE_MAX];
+		pk_service_t pk;
+	} serv;
+} service_list_t;
+
+int ask_server_for_services(service_list_t ** head);
 
 int main(int argc, const char * argv[])
 {
@@ -53,7 +62,7 @@ int ask_server_for_services(service_list_t ** head)
 		goto exit;
 	}
 	
-	ret = send_handshake(sockfd);
+	ret = send_handshake(sockfd, DEFAULT_TIMEOUT);
 	if (ret) {
 		fprintf(stderr, "Bad handshake\n");
 		goto close_sock;
@@ -83,7 +92,7 @@ int ask_server_for_services(service_list_t ** head)
 		else
 			current = current->next = calloc(1, sizeof(service_list_t));
 		
-		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, 0);
+		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, DEFAULT_TIMEOUT, 0);
 		if(ret < 0)
 		{
 			//		perror("consumer: pk_recv");
