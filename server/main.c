@@ -13,7 +13,7 @@
 #include <sqlite3.h>
 #include <unistd.h>
 
-#include "../network/network.h"
+#include "../common/network.h"
 
 
 
