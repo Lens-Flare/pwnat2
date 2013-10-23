@@ -72,11 +72,12 @@ void hton_pk(pk_keepalive_t * pk) {
 }
 
 
-ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags) {
+ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], unsigned int timeout, int flags) {
 	ssize_t bytes = 0, total = 0;
 	pk_keepalive_t * pk = (pk_keepalive_t *)buf;
 	
 	buf[0] = 0;
+	alarm(timeout);
 	
 	total += bytes = recv(sockfd, buf, 1, flags);
 	
@@ -116,6 +117,7 @@ done:
 			str->data[str->length - 1] = 0;
 	}
 exit:
+	alarm(0);
 	return total;
 	
 error:
@@ -460,7 +462,7 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 
 #pragma mark - Handshaking
 
-errcode send_handshake(int sockfd) {
+errcode send_handshake(int sockfd, int timeout) {
 	errcode retv = 0;
 	ssize_t bytes;
 	char buf[256];
@@ -478,7 +480,7 @@ errcode send_handshake(int sockfd) {
 	
 	
 	
-	bytes = pk_recv(sockfd, buf, 0);
+	bytes = pk_recv(sockfd, buf, timeout, 0);
 	if ((retv = bytes < 0))
 		goto free;
 	
@@ -509,7 +511,7 @@ free:
 	return retv;
 }
 
-errcode recv_handshake(int sockfd) {
+errcode recv_handshake(int sockfd, int timeout) {
 	errcode retv = 0;
 	ssize_t bytes;
 	char buf[256];
@@ -517,7 +519,7 @@ errcode recv_handshake(int sockfd) {
 	
 	
 	
-	bytes = pk_recv(sockfd, buf, 0);
+	bytes = pk_recv(sockfd, buf, timeout, 0);
 	if ((retv = bytes < 0))
 		goto free;
 	
@@ -541,7 +543,7 @@ errcode recv_handshake(int sockfd) {
 	
 	
 	
-	bytes = pk_recv(sockfd, buf, 0);
+	bytes = pk_recv(sockfd, buf, timeout, 0);
 	if ((retv = bytes < 0))
 		goto free;
 	
