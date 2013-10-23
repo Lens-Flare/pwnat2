@@ -181,8 +181,8 @@
 			isa = PBXGroup;
 			children = (
 				4247B2A2181761F600C1612D /* network.md */,
-				4247B2A0181761F600C1612D /* network.c */,
 				4247B2A1181761F600C1612D /* network.h */,
+				4247B2A0181761F600C1612D /* network.c */,
 				4291AF87181379EF003F8680 /* common.h */,
 				4291AF8818138C87003F8680 /* common.c */,
 				4247B2A61817633F00C1612D /* config.c */,

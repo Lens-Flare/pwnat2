@@ -128,7 +128,7 @@ typedef struct pk_service pk_service_t;
 
 ssize_t pk_send(int sockfd, pk_keepalive_t * pk, int flags);
 void hton_pk(pk_keepalive_t * pk);
-ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], int flags);
+ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], unsigned int timeout, int flags);
 void ntoh_pk(pk_keepalive_t * pk);
 
 int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa);
@@ -152,7 +152,7 @@ void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned sh
 pk_error_code_t check_version(pk_keepalive_t * pk);
 pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv);
 
-errcode send_handshake(int sockfd);
-errcode recv_handshake(int sockfd);
+errcode send_handshake(int sockfd, int timeout);
+errcode recv_handshake(int sockfd, int timeout);
 
 #endif

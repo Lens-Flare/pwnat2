@@ -17,6 +17,7 @@
 #define SUBREVISION		2
 
 #define SERVER_PORT		"45678"
+#define DEFAULT_TIMEOUT	60
 
 #define _perror()		perror(__FUNCTION__);
 
@@ -32,6 +33,10 @@ struct config_var {
 	char * env_name;		// environment variable name
 	void * default_val;		// default value - if numeric, int, otherwise, char *
 	void * value;			// variable value - if numeric, int *, otherwise, char **
+	
+	// CAVEAT: int values must be castable to char *; if the size of a pointer
+	//   is larger than the size of the value storage, nearby values will be
+	//   overwritten
 };
 
 

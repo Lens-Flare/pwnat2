@@ -62,7 +62,7 @@ int ask_server_for_services(service_list_t ** head)
 		goto exit;
 	}
 	
-	ret = send_handshake(sockfd);
+	ret = send_handshake(sockfd, DEFAULT_TIMEOUT);
 	if (ret) {
 		fprintf(stderr, "Bad handshake\n");
 		goto close_sock;
@@ -92,7 +92,7 @@ int ask_server_for_services(service_list_t ** head)
 		else
 			current = current->next = calloc(1, sizeof(service_list_t));
 		
-		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, 0);
+		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, DEFAULT_TIMEOUT, 0);
 		if(ret < 0)
 		{
 			//		perror("consumer: pk_recv");
