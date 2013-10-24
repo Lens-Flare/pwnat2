@@ -32,6 +32,8 @@ int main(int argc, const char * argv[])
 	char s[INET6_ADDRSTRLEN];
 	
 	ret = ask_server_for_services(&srvs);
+	if(ret)
+		return ret;
 	
 	for (service_list_t * current = srvs; current && current->serv.pk._super.type != PK_RESPONSE; current = current->next)
 	{

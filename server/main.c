@@ -41,9 +41,15 @@ int do_handler(int sockfd, struct sockaddr_storage addr, socklen_t addrlen, int 
 int main(int argc, const char * argv[]) {
 	int retv = 0;
 	char dbname[L_tmpnam];
+	char* retname;
 	sqlite3 * db = NULL;
 	
-	tmpnam(dbname);
+	retname = tmpnam(dbname);
+	if(!retname)
+	{
+		printf("tmpnam() returned NULL! die.");
+		return -1;
+	}
 	printf("opening a new database at %s\n", dbname);
 	
 	retv = sqlite3_open(dbname, &db);

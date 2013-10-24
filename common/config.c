@@ -46,7 +46,7 @@ int config(int argc, const char * argv[], int num_vars, struct config_var * vars
 		if (!var)
 			longopts[i] = (struct option){0, 0, 0, 0};
 		else if (var->type.flag)
-			longopts[i] = (struct option){var->name, no_argument, (int *)var->value, (int)var->default_val};
+			longopts[i] = (struct option){var->name, no_argument, (int *)var->value, (intptr_t)var->default_val};
 		else if (var->type.required)
 			longopts[i] = (struct option){var->name, required_argument, NULL, var->short_opt};
 		else
@@ -82,7 +82,7 @@ int config(int argc, const char * argv[], int num_vars, struct config_var * vars
 			default:
 				if ((var = lookup[c])) {
 					if (var->type.flag)
-						*(int *)var->value = (int)var->default_val;
+						*(int *)var->value = (intptr_t)var->default_val;
 					else if (optarg)
 						*(char **)var->value = optarg;
 				}
@@ -96,7 +96,7 @@ int config(int argc, const char * argv[], int num_vars, struct config_var * vars
 			if (*(char  **)var->value)
 				*(int *)var->value = atoi(*(char **)var->value);
 			else
-				*(int *)var->value = (int)var->default_val;
+				*(int *)var->value = (intptr_t)var->default_val;
 		}
 		
 	
