@@ -320,8 +320,13 @@ static void pkcpy_string(struct _pk_string * dest, const char * src) {
 static void pkcpy_address(struct _pk_address * dest, struct sockaddr * src) {
 	dest->family = src->sa_family;
 	
-	for (int i = 0; i < 4 && i < src->sa_len; i++)
-		dest->data[i] = src->sa_data[i];
+	if(src->sa_family == AF_INET)
+		memcpy(dest->data, src->sa_data, sizeof(struct in_addr));
+	else
+		memcpy(dest->data, src->sa_data, sizeof(struct in6_addr));
+
+//	for (int i = 0; i < 4 && i < src->sa_len; i++)
+//		dest->data[i] = src->sa_data[i];
 }
 
 
