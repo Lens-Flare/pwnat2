@@ -23,6 +23,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		4210EA111818887A00301FE9 /* rawnet.c in Sources */ = {isa = PBXBuildFile; fileRef = 4210EA101818887A00301FE9 /* rawnet.c */; };
 		4247B2A3181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A4181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A5181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
@@ -102,6 +103,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4210EA101818887A00301FE9 /* rawnet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = rawnet.c; sourceTree = "<group>"; };
 		4247B2A0181761F600C1612D /* network.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = network.c; sourceTree = "<group>"; };
 		4247B2A1181761F600C1612D /* network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = network.h; sourceTree = "<group>"; };
 		4247B2A2181761F600C1612D /* network.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = network.md; sourceTree = "<group>"; };
@@ -157,7 +159,6 @@
 			children = (
 				4284F83F181480A4008D3B8C /* Makefile */,
 				4284F840181480A4008D3B8C /* README.md */,
-				42B8EA69180F44170032EA4B /* network */,
 				42701A93180F3B7800DD33BC /* common */,
 				42B8EA43180F3CAA0032EA4B /* server */,
 				42B8EA50180F3CB30032EA4B /* provider */,
@@ -180,10 +181,11 @@
 		42701A93180F3B7800DD33BC /* common */ = {
 			isa = PBXGroup;
 			children = (
+				4291AF87181379EF003F8680 /* common.h */,
 				4247B2A2181761F600C1612D /* network.md */,
 				4247B2A1181761F600C1612D /* network.h */,
+				4210EA101818887A00301FE9 /* rawnet.c */,
 				4247B2A0181761F600C1612D /* network.c */,
-				4291AF87181379EF003F8680 /* common.h */,
 				4291AF8818138C87003F8680 /* common.c */,
 				4247B2A61817633F00C1612D /* config.c */,
 			);
@@ -215,13 +217,6 @@
 				42B8EA60180F3CB80032EA4B /* consumer.1 */,
 			);
 			path = consumer;
-			sourceTree = "<group>";
-		};
-		42B8EA69180F44170032EA4B /* network */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = network;
 			sourceTree = "<group>";
 		};
 		42B8EA73180F6A470032EA4B /* Libraries */ = {
@@ -325,6 +320,7 @@
 				42B8EA45180F3CAA0032EA4B /* main.c in Sources */,
 				4291AF8918138C87003F8680 /* common.c in Sources */,
 				4247B2A71817633F00C1612D /* config.c in Sources */,
+				4210EA111818887A00301FE9 /* rawnet.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

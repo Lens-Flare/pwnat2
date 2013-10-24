@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+#define STRLEN(s)		(sizeof(s)/sizeof(s[0])
+
 #define MAJOR_VERSION	0
 #define MINOR_VERSION	1
 #define REVISION		1
@@ -18,6 +20,8 @@
 
 #define SERVER_PORT		"45678"
 #define DEFAULT_TIMEOUT	60
+#define ENV_PREFIX		"_PWNAT_"
+#define ENV_PREFIX_LEN	STRLEN(ENV_PREFIX)
 
 #define _perror()		perror(__FUNCTION__);
 

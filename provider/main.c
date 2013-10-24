@@ -15,6 +15,8 @@
 #include <getopt.h>
 #include <limits.h>
 #include <signal.h>
+//#include <netpacket/packet.h>
+#include <net/ethernet.h>
 
 #include "../common/network.h"
 #include "../common/common.h"
@@ -46,15 +48,15 @@ int main(int argc, const char * argv[]) {
 	} cfg;
 	
 	struct config_var vars[] = {
-//		{"name",			{0, f, r, n},	'-',	"ENV_NAME",				DEFAULT_VALUE,				&my_variable},
-		{"verbose",			{0, 1, 0, 0},	'v',	NULL,					(void *)1,					&cfg.verbose},
-		{"quiet",			{0, 1, 0, 0},	'q',	NULL,					(void *)-1,					&cfg.verbose},
-		{"hostname",		{0, 0, 1, 0},	'h',	"HOSTNAME",				"localhost",				&cfg.hostname},
-		{"port",			{0, 0, 1, 0},	'p',	"PORT",					SERVER_PORT,				&cfg.port},
-		{"source-type",		{0, 0, 1, 0},	't',	"SOURCE_TYPE",			"file",						&cfg.source_type},
-		{"source-name",		{0, 0, 1, 0},	's',	"SOURCE_NAME",			NULL,						&cfg.source_name},
-		{"keepalive-int",	{0, 0, 1, 1},	'k',	"KEEPALIVE_INTERVAL",	(void *)300,				&cfg.keepalive},
-		{"packet-timeout",	{0, 0, 1, 1},	't',	"PACKET_TIMEOUT",		(void *)DEFAULT_TIMEOUT,	&cfg.timeout}
+//		{"name",			{0,f,r,n},	'-',	"ENV_NAME",						DEFAULT_VALUE,				&my_variable},
+		{"verbose",			{0,1,0,0},	'v',	NULL,							(void *)1,					&cfg.verbose},
+		{"quiet",			{0,1,0,0},	'q',	NULL,							(void *)-1,					&cfg.verbose},
+		{"hostname",		{0,0,1,0},	'h',	ENV_PREFIX"HOSTNAME",			"localhost",				&cfg.hostname},
+		{"port",			{0,0,1,0},	'p',	ENV_PREFIX"PORT",				SERVER_PORT,				&cfg.port},
+		{"source-type",		{0,0,1,0},	't',	ENV_PREFIX"SOURCE_TYPE",		"file",						&cfg.source_type},
+		{"source-name",		{0,0,1,0},	's',	ENV_PREFIX"SOURCE_NAME",		NULL,						&cfg.source_name},
+		{"keepalive-int",	{0,0,1,1},	'k',	ENV_PREFIX"KEEPALIVE_INTERVAL",	(void *)300,				&cfg.keepalive},
+		{"packet-timeout",	{0,0,1,1},	't',	ENV_PREFIX"PACKET_TIMEOUT",		(void *)DEFAULT_TIMEOUT,	&cfg.timeout}
 	};
 	
 	int sockfd = 0;
@@ -66,7 +68,6 @@ int main(int argc, const char * argv[]) {
 	
 	pid_t keepalive_pid = 0;
 	struct keepalive_param kp = {&sockfd, &cfg.keepalive};
-	
 	
 	config(argc, argv, sizeof(vars)/sizeof(struct config_var), vars);
 	
@@ -96,12 +97,6 @@ int main(int argc, const char * argv[]) {
 			goto free;
 		}
 		
-		// states:
-		//  0 - whitespace before name
-		//  1 - name
-		//  2 - whitespace between name and port
-		//  3 - port
-		//  4 - whitespace after port
 		char state = 0, name[220], port[7];
 		for (int c = 0, i = 0, j = 0; (c = fgetc(file)) > 0;)
 			switch (state) {
