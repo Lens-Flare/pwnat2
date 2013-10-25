@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <sqlite3.h>
 
-#include "network.h"
+#include "common.h"
 
 #ifdef __APPLE__
 	#define pk_hs_hash(dest, src) CC_SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
@@ -246,7 +246,6 @@ int connect_socket(const char * hostname, const char * servname, int * sockfd) {
 	for (p = servinfo; p; p = p->ai_next) {
 		char s[INET6_ADDRSTRLEN];
 		inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
-		printf("connecting to %s\n", s);
 		
 		if ((*sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {
 			perror("server: socket");

@@ -12,8 +12,14 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "../common/network.h"
+#include <string.h>
+
 #include "../common/common.h"
+
+struct {
+	cfgint verbose, keepalive, timeout;
+	char * var_setup, * hostname, * port, * source_type, * source_name;
+} cfg;
 
 typedef struct service_list {
 	struct service_list * next;
@@ -25,11 +31,42 @@ typedef struct service_list {
 
 int ask_server_for_services(service_list_t ** head);
 
+void usage(const char * argv0) {
+	printf("Usage: %s [-0 prefix | list] [-q | -v] [-h hostname] [-p port] [-t timeout]\n", argv0);
+}
+
 int main(int argc, const char * argv[])
 {
+	struct config_var vars[] = {
+		{"var-setup",		{ct_var, ct_req, ct_str},	'0',	NULL,							NULL,						&cfg.var_setup},
+		{"verbose",			{ct_flg, 0     , 0     },	'v',	NULL,							(void *)1,					&cfg.verbose},
+		{"quiet",			{ct_flg, 0     , 0     },	'q',	NULL,							(void *)-1,					&cfg.verbose},
+		{"hostname",		{ct_var, ct_req, ct_str},	'h',	ENV_PREFIX"HOSTNAME",			"localhost",				&cfg.hostname},
+		{"port",			{ct_var, ct_req, ct_str},	'p',	ENV_PREFIX"PORT",				SERVER_PORT,				&cfg.port},
+		{"packet-timeout",	{ct_var, ct_req, ct_num},	't',	ENV_PREFIX"PACKET_TIMEOUT",		(void *)DEFAULT_TIMEOUT,	&cfg.timeout}
+	};
+	
 	service_list_t * srvs;
 	int ret;
 	char s[INET6_ADDRSTRLEN];
+	
+	ret = config(argc, argv, ARRLEN(vars), (struct config_var *)vars);
+	if (ret) {
+		usage(argv[0]);
+		return ret;
+	}
+	
+	if (cfg.var_setup) {
+		if (!strcasecmp("prefix", cfg.var_setup)) {
+			printf(ENV_PREFIX"\n");
+			return 0;
+		} else if (!strcasecmp("list", cfg.var_setup)) {
+			for (int i = 0; i < ARRLEN(vars); i++)
+				if (vars[i].env_name)
+					printf("%s\n", vars[i].env_name + ENV_PREFIX_LEN - 1);
+			return 0;
+		}
+	}
 	
 	ret = ask_server_for_services(&srvs);
 	if(ret)
@@ -57,14 +94,14 @@ int ask_server_for_services(service_list_t ** head)
 	pk_keepalive_t * packet;
 	
 	
-	ret = connect_socket("localhost", SERVER_PORT, &sockfd);
+	ret = connect_socket(cfg.hostname, cfg.port, &sockfd);
 	if(ret)
 	{
 //		perror("consumer: open_socket");
 		goto exit;
 	}
 	
-	ret = send_handshake(sockfd, DEFAULT_TIMEOUT);
+	ret = send_handshake(sockfd, (int)cfg.timeout);
 	if (ret) {
 		fprintf(stderr, "Bad handshake\n");
 		goto close_sock;
@@ -94,7 +131,7 @@ int ask_server_for_services(service_list_t ** head)
 		else
 			current = current->next = calloc(1, sizeof(service_list_t));
 		
-		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, DEFAULT_TIMEOUT, 0);
+		ret = (int)pk_recv(sockfd, (char *)&current->serv.buf, (int)cfg.timeout, 0);
 		if(ret < 0)
 		{
 			//		perror("consumer: pk_recv");
