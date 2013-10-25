@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <sqlite3.h>
 
-#include "network.h"
+#include "common.h"
 
 #ifdef __APPLE__
 	#define pk_hs_hash(dest, src) CC_SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);

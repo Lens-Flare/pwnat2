@@ -12,7 +12,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "../common/network.h"
+
 #include "../common/common.h"
 
 typedef struct service_list {
