@@ -14,7 +14,7 @@ struct ip_header {
 	uint16_t len;
 	
 	uint16_t id;
-	uint16_t flags:3, offset:13
+	uint16_t flags:3, offset:13;
 	
 	uint8_t ttl, proto;
 	uint16_t checksum;

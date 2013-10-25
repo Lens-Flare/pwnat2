@@ -24,6 +24,9 @@
 
 /* Begin PBXBuildFile section */
 		4210EA111818887A00301FE9 /* rawnet.c in Sources */ = {isa = PBXBuildFile; fileRef = 4210EA101818887A00301FE9 /* rawnet.c */; };
+		424057D4181A39200026989A /* setup.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057D3181A39200026989A /* setup.c */; };
+		424057D9181A3FC10026989A /* listen.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057D8181A3FC10026989A /* listen.c */; };
+		424057DB181A42720026989A /* handle.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057DA181A42720026989A /* handle.c */; };
 		4247B2A3181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A4181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A5181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
@@ -104,8 +107,12 @@
 
 /* Begin PBXFileReference section */
 		4210EA101818887A00301FE9 /* rawnet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = rawnet.c; sourceTree = "<group>"; };
+		424057D21819DECF0026989A /* export.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = export.sh; sourceTree = "<group>"; };
+		424057D3181A39200026989A /* setup.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = setup.c; sourceTree = "<group>"; };
+		424057D5181A39380026989A /* server.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = server.h; sourceTree = "<group>"; };
+		424057D8181A3FC10026989A /* listen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = listen.c; sourceTree = "<group>"; };
+		424057DA181A42720026989A /* handle.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = handle.c; sourceTree = "<group>"; };
 		4247B2A0181761F600C1612D /* network.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = network.c; sourceTree = "<group>"; };
-		4247B2A1181761F600C1612D /* network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = network.h; sourceTree = "<group>"; };
 		4247B2A2181761F600C1612D /* network.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = network.md; sourceTree = "<group>"; };
 		4247B2A61817633F00C1612D /* config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = config.c; sourceTree = "<group>"; };
 		4284F83F181480A4008D3B8C /* Makefile */ = {isa = PBXFileReference; explicitFileType = text; path = Makefile; sourceTree = "<group>"; };
@@ -157,6 +164,7 @@
 		42701A88180F3B7800DD33BC = {
 			isa = PBXGroup;
 			children = (
+				424057D21819DECF0026989A /* export.sh */,
 				4284F83F181480A4008D3B8C /* Makefile */,
 				4284F840181480A4008D3B8C /* README.md */,
 				42701A93180F3B7800DD33BC /* common */,
@@ -183,7 +191,6 @@
 			children = (
 				4291AF87181379EF003F8680 /* common.h */,
 				4247B2A2181761F600C1612D /* network.md */,
-				4247B2A1181761F600C1612D /* network.h */,
 				4210EA101818887A00301FE9 /* rawnet.c */,
 				4247B2A0181761F600C1612D /* network.c */,
 				4291AF8818138C87003F8680 /* common.c */,
@@ -195,8 +202,12 @@
 		42B8EA43180F3CAA0032EA4B /* server */ = {
 			isa = PBXGroup;
 			children = (
-				42B8EA44180F3CAA0032EA4B /* main.c */,
 				42B8EA46180F3CAA0032EA4B /* server.1 */,
+				424057D5181A39380026989A /* server.h */,
+				42B8EA44180F3CAA0032EA4B /* main.c */,
+				424057D3181A39200026989A /* setup.c */,
+				424057D8181A3FC10026989A /* listen.c */,
+				424057DA181A42720026989A /* handle.c */,
 			);
 			path = server;
 			sourceTree = "<group>";
@@ -319,6 +330,9 @@
 				4247B2A3181761F600C1612D /* network.c in Sources */,
 				42B8EA45180F3CAA0032EA4B /* main.c in Sources */,
 				4291AF8918138C87003F8680 /* common.c in Sources */,
+				424057D4181A39200026989A /* setup.c in Sources */,
+				424057D9181A3FC10026989A /* listen.c in Sources */,
+				424057DB181A42720026989A /* handle.c in Sources */,
 				4247B2A71817633F00C1612D /* config.c in Sources */,
 				4210EA111818887A00301FE9 /* rawnet.c in Sources */,
 			);
