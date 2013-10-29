@@ -44,20 +44,22 @@ struct keepalive_param {
 
 int main(int argc, const char * argv[]) {
 	struct {
-		cfgint verbose, keepalive, timeout;
+		cfgint help, verbose, keepalive, timeout;
 		char * var_setup, * hostname, * port, * source_type, * source_name;
 	} cfg;
 	
 	struct config_var vars[] = {
-		{"var-setup",		{ct_var, ct_req, ct_str},	'0',	NULL,							NULL,						&cfg.var_setup},
-		{"verbose",			{ct_flg, 0     , 0     },	'v',	NULL,							(void *)1,					&cfg.verbose},
-		{"quiet",			{ct_flg, 0     , 0     },	'q',	NULL,							(void *)-1,					&cfg.verbose},
-		{"hostname",		{ct_var, ct_req, ct_str},	'h',	ENV_PREFIX"HOSTNAME",			"localhost",				&cfg.hostname},
-		{"port",			{ct_var, ct_req, ct_str},	'p',	ENV_PREFIX"PORT",				SERVER_PORT,				&cfg.port},
+		{"var-setup",		{ct_var, ct_req, ct_str},	'0',	NULL,							NULL,						&cfg.var_setup	},
+		{"help",			{ct_flg, 0     , 0     },	0,		NULL,							(void *)1,					&cfg.help		},
+		{"usage",			{ct_flg, 0     , 0     },	'u',	NULL,							(void *)1,					&cfg.help		},
+		{"verbose",			{ct_flg, 0     , 0     },	'v',	NULL,							(void *)1,					&cfg.verbose	},
+		{"quiet",			{ct_flg, 0     , 0     },	'q',	NULL,							(void *)-1,					&cfg.verbose	},
+		{"hostname",		{ct_var, ct_req, ct_str},	'h',	ENV_PREFIX"HOSTNAME",			"localhost",				&cfg.hostname	},
+		{"port",			{ct_var, ct_req, ct_str},	'p',	ENV_PREFIX"PORT",				SERVER_PORT,				&cfg.port		},
 		{"source-type",		{ct_var, ct_req, ct_str},	't',	ENV_PREFIX"SOURCE_TYPE",		"file",						&cfg.source_type},
 		{"source-name",		{ct_var, ct_req, ct_str},	's',	ENV_PREFIX"SOURCE_NAME",		NULL,						&cfg.source_name},
-		{"keepalive-int",	{ct_var, ct_req, ct_num},	'k',	ENV_PREFIX"KEEPALIVE_INTERVAL",	(void *)300,				&cfg.keepalive},
-		{"packet-timeout",	{ct_var, ct_req, ct_num},	't',	ENV_PREFIX"PACKET_TIMEOUT",		(void *)DEFAULT_TIMEOUT,	&cfg.timeout}
+		{"keepalive-int",	{ct_var, ct_req, ct_num},	'k',	ENV_PREFIX"KEEPALIVE_INTERVAL",	(void *)300,				&cfg.keepalive	},
+		{"packet-timeout",	{ct_var, ct_req, ct_num},	't',	ENV_PREFIX"PACKET_TIMEOUT",		(void *)DEFAULT_TIMEOUT,	&cfg.timeout	}
 	};
 	
 	int sockfd = 0;
@@ -70,8 +72,15 @@ int main(int argc, const char * argv[]) {
 	pid_t keepalive_pid = 0;
 	struct keepalive_param kp = {&sockfd, &cfg.keepalive};
 	
+	memset(&cfg, 0, sizeof(cfg));
+	
 	retv = config(argc, argv, ARRLEN(vars), (struct config_var *)vars);
 	if (retv) {
+		usage(argv[0]);
+		goto exit;
+	}
+	
+	if (cfg.help) {
 		usage(argv[0]);
 		goto exit;
 	}
@@ -103,7 +112,7 @@ int main(int argc, const char * argv[]) {
 		goto free;
 	}
 	
-	
+	sigignore(SIGCHLD);
 	_fork(&keepalive_pid, &do_keepalive, &kp);
 	
 	

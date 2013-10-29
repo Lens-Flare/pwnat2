@@ -11,16 +11,20 @@
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
 #include "server.h"
 
-static const char server_db_tmp[] = SERVER_DB_TMP;
+static char server_db_tmp[] = SERVER_DB_TMP;
 
-int server_configure() {
+int server_s_config() {
 	int retv;
 	
 	struct config_var vars[] = {
 		{"var-setup",		{ct_var, ct_req, ct_str},	'0',	NULL,						NULL,						&cfg.var_setup	},
+		{"help",			{ct_flg, 0     , 0     },	0,		NULL,						(void *)1,					&cfg.help		},
+		{"usage",			{ct_flg, 0     , 0     },	'u',	NULL,						(void *)1,					&cfg.help		},
 		{"verbose",			{ct_flg, 0     , 0     },	'v',	NULL,						(void *)1,					&cfg.verbose	},
 		{"quiet",			{ct_flg, 0     , 0     },	'q',	NULL,						(void *)-1,					&cfg.verbose	},
 		{"database",		{ct_var, ct_req, ct_str},	'd',	ENV_PREFIX"DATABASE",		(void *)server_db_tmp,		&cfg.dbname		},
@@ -33,6 +37,11 @@ int server_configure() {
 	retv = config(stt_main.argc, stt_main.argv, ARRLEN(vars), vars);
 	if (retv) {
 		retv = SEC_OPTIONS;
+		goto _return;
+	}
+	
+	if (cfg.help) {
+		retv = SEC_USAGE;
 		goto _return;
 	}
 	
@@ -53,7 +62,25 @@ _return:
 	return retv;
 }
 
-int server_init_db() {
+int server_s_ipc() {
+	int retv = 0;
+	
+	stt_main.queue_key = ftok(stt_main.argv[0], 0xC0D4);
+	if (stt_main.queue_key < 0) {
+		retv = SEC_FTOK;
+		goto _return;
+	}
+	
+	stt_main.queue_id = msgget(stt_main.queue_key, 0666 | IPC_CREAT);
+	if (stt_main.queue_id < 0) {
+		retv = SEC_MSGGET;
+	}
+	
+_return:
+	return retv;
+}
+
+int server_s_sqlite() {
 	int retv;
 	sqlite3 * db;
 	char * retname;
@@ -90,7 +117,7 @@ _return:
 	return retv;
 }
 
-int server_init_sig() {
+int server_s_sigaction() {
 	int retv;
     struct sigaction sa;
 	

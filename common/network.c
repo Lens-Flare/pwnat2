@@ -18,12 +18,6 @@
 
 #include "common.h"
 
-#ifdef __APPLE__
-	#define pk_hs_hash(dest, src) CC_SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
-#else
-	#define pk_hs_hash(dest, src) SHA256((const void*) src, HANDSHAKE_SIZE, (void*) dest);
-#endif
-
 
 
 #pragma mark Packet Transmission/Reception
@@ -81,32 +75,45 @@ ssize_t pk_recv(int sockfd, char buf[PACKET_SIZE_MAX], unsigned int timeout, int
 	
 	total += bytes = recv(sockfd, buf, 1, flags);
 	
-	if (bytes < 0)
-		goto error;
-	else if (bytes == 0) {
+	if (bytes < 0) {
+		perror("recv");
+		total = -PK_RECV_ERROR;
+		goto _return;
+	} else if (bytes == 0) {
 		fprintf(stderr, "Connection closed\n");
-		goto fail;
+		total = -PK_RECV_CONN_CLOSED;
+		goto _return;
 	} else if (buf[0] != (char)PACKET_SIG) {
 		fprintf(stderr, "Missing packet signature\n");
-		goto fail;
+		total = -PK_RECV_MISSING_SIG;
+		goto _return;
 	}
 	
 	total += bytes = recv(sockfd, buf + total, sizeof(pk_keepalive_t) - total, flags);
 	
-	if (bytes < 0)
-		goto error;
-	
-	if (pk->size == total)
+	if (bytes < 0) {
+		perror("recv");
+		total = -PK_RECV_ERROR;
+		goto _return;
+	} else if (pk->size == total)
 		goto done;
-	else if (pk->size < total)
-		goto failbytes;
+	else if (pk->size < total) {
+		fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", total, pk->size);
+		total = -PK_RECV_BAD_SIZE;
+		goto _return;
+	}
 	
 	total += bytes = recv(sockfd, buf + total, pk->size - total, flags);
 	
-	if (bytes < 0)
-		goto error;
-	else if (total != pk->size)
-		goto failbytes;
+	if (bytes < 0) {
+		perror("recv");
+		total = -PK_RECV_ERROR;
+		goto _return;
+	} else if (pk->size < total) {
+		fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", total, pk->size);
+		total = -PK_RECV_BAD_SIZE;
+		goto _return;
+	}
 	
 done:
 	ntoh_pk(pk);
@@ -116,19 +123,10 @@ done:
 		if (str->length > 1 || (str->data[0] != '-' && str->data[0] != '+'))
 			str->data[str->length - 1] = 0;
 	}
-exit:
+	
+_return:
 	alarm(0);
 	return total;
-	
-error:
-	perror("recv");
-	goto exit;
-	
-failbytes:
-	fprintf(stderr, "%ld bytes received but packet size is %d bytes\n", bytes, pk->size);
-fail:
-	total = -1;
-	goto exit;
 }
 
 static void ntoh_addr(struct _pk_address * addr) {
@@ -158,15 +156,49 @@ void ntoh_pk(pk_keepalive_t * pk) {
 
 #pragma mark - Generic Network Functions
 
-int sqlite3_bind_address(sqlite3_stmt * stmt, int index, struct sockaddr * sa) {
-	return sqlite3_bind_blob(stmt, index, &sa->sa_data, sa->sa_family == AF_INET6 ? 16 : 4, SQLITE_TRANSIENT);
-}
-
-
 void * get_in_addr(struct sockaddr * sa) {
 	if (sa->sa_family == AF_INET)
 		return &(((struct sockaddr_in*)sa)->sin_addr);
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+in_port_t get_in_port(struct sockaddr * sa) {
+	if (sa->sa_family == AF_INET)
+		return ((struct sockaddr_in *)sa)->sin_port;
+	return ((struct sockaddr_in6 *)sa)->sin6_port;
+}
+
+size_t get_in_addr_len(struct sockaddr * sa) {
+	if (sa->sa_family == AF_INET)
+		return sizeof(struct in_addr);
+	return sizeof(struct in6_addr);
+}
+
+uint64_t get_addrptr_port_hash(void * addr, sa_family_t family, in_port_t port) {
+	uint64_t hash[4];
+	uint8_t data[sizeof(struct in6_addr) + 1];
+	
+	memset(data, 0, sizeof(data));
+	
+	if (family == AF_INET)
+		memcpy(addr, data + 1, sizeof(struct in_addr));
+	else
+		memcpy(addr, data + 1, sizeof(struct in6_addr));
+	
+	SHA256(hash, data, sizeof(data));
+	
+	return hash[0];
+}
+
+uint64_t get_sock_addr_hash(struct sockaddr * sa) {
+	if (sa->sa_family == AF_INET)
+		return get_addrptr_port_hash(&sa->sa_data, sa->sa_family, ((struct sockaddr_in *)sa)->sin_port);
+	else
+		return get_addrptr_port_hash(&sa->sa_data, sa->sa_family, ((struct sockaddr_in6 *)sa)->sin6_port);
+}
+
+uint64_t get_addr_port_hash(struct _pk_address * addr, in_port_t port) {
+	return get_addrptr_port_hash(&addr->data, addr->family, port);
 }
 
 const char * get_port_service_name(int port, const char * proto) {
@@ -352,7 +384,7 @@ pk_handshake_t * make_pk_handshake(pk_handshake_t * recv) {
 	if (!recv) {
 		hs->step = PK_HS_INITIAL;
 		_random(&hs->data, HANDSHAKE_SIZE);
-		pk_hs_hash((void *)&hs->hash, &hs->data);
+		HANDSHAKE_HASH((void *)&hs->hash, &hs->data);
 	} else {
 		switch (recv->step) {
 			case PK_HS_INITIAL:
@@ -367,13 +399,13 @@ pk_handshake_t * make_pk_handshake(pk_handshake_t * recv) {
 				break;
 		}
 		memcpy(&hs->data, &recv->hash, HANDSHAKE_SIZE);
-		pk_hs_hash((void *)&hs->hash, &hs->data);
+		HANDSHAKE_HASH((void *)&hs->hash, &hs->data);
 	}
 	
 	return hs;
 }
 
-pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
+pk_advertize_t * make_pk_advertize(in_port_t port, const char * name) {
 	pk_advertize_t * ad = (pk_advertize_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!ad)
 		return ad;
@@ -383,7 +415,7 @@ pk_advertize_t * make_pk_advertize(unsigned short port, const char * name) {
 	return ad;
 }
 
-pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, const char * name) {
+pk_service_t * make_pk_service(struct sockaddr * address, in_port_t port, const char * name) {
 	pk_service_t * serv = (pk_service_t *)alloc_packet(sizeof(pk_advertize_t) + strlen(name) + 1);
 	if (!serv)
 		return serv;
@@ -394,7 +426,28 @@ pk_service_t * make_pk_service(struct sockaddr * address, unsigned short port, c
 }
 
 
-void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * name) {
+pk_forward_t * make_pk_forward(struct sockaddr * address, in_port_t port) {
+	pk_forward_t * fw = (pk_forward_t *)alloc_packet(sizeof(pk_forward_t));
+	if (!fw)
+		return fw;
+	
+	init_pk_forward(fw, address, port);
+	
+	return fw;
+}
+
+pk_miscdata_t * make_pk_miscdata(const char * buf, size_t len) {
+	pk_miscdata_t * misc = (pk_miscdata_t *)alloc_packet(sizeof(pk_miscdata_t) + len);
+	if (!misc)
+		return misc;
+	
+	init_pk_miscdata(misc, buf, len);
+	
+	return misc;
+}
+
+
+void init_pk_advertize(pk_advertize_t * ad, in_port_t port, const char * name) {
 	ad->_super.size = sizeof(pk_advertize_t) + strlen(name) + 1;
 	
 	init_packet((pk_keepalive_t *)ad, PK_ADVERTIZE);
@@ -403,7 +456,7 @@ void init_pk_advertize(pk_advertize_t * ad, unsigned short port, const char * na
 	if (name) pkcpy_string(&ad->name, name);
 }
 
-void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned short port, const char * name) {
+void init_pk_service(pk_service_t * serv, struct sockaddr * address, in_port_t port, const char * name) {
 	serv->_super.size = sizeof(pk_service_t) + strlen(name) + 1;
 	
 	init_packet((pk_keepalive_t *)serv, PK_SERVICE);
@@ -411,6 +464,23 @@ void init_pk_service(pk_service_t * serv, struct sockaddr * address, unsigned sh
 	if (address) pkcpy_address(&serv->address, address);
 	serv->port = port;
 	if (name) pkcpy_string(&serv->name, name);
+}
+
+void init_pk_forward(pk_forward_t * fw, struct sockaddr * address, in_port_t port) {
+//	serv->_super.size = sizeof(pk_forward_t);
+	
+	init_packet((pk_keepalive_t *)fw, PK_FORWARD);
+	
+	if (address) pkcpy_address(&fw->address, address);
+	fw->port = port;
+}
+
+void init_pk_miscdata(pk_miscdata_t * misc, const char * buf, size_t len) {
+	misc->_super.size = sizeof(pk_miscdata_t) + len;
+	
+	init_packet((pk_keepalive_t *)misc, PK_MISCDATA);
+	
+	if (buf) memcpy(&misc->miscdata.data, buf, len);
 }
 
 
@@ -455,7 +525,7 @@ pk_error_code_t check_handshake(pk_handshake_t * hs, pk_handshake_t * recv) {
 	} else if (recv->step != PK_HS_INITIAL)
 		return NET_ERR_HANDSHAKE_BAD_SEQUENCE;
 	
-	pk_hs_hash(check, &recv->data);
+	HANDSHAKE_HASH(check, &recv->data);
 	if (memcmp(&recv->hash, check, HANDSHAKE_SIZE))
 		return NET_ERR_HANDSHAKE_INCORRECT_HASH;
 	

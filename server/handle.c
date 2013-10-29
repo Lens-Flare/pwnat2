@@ -11,41 +11,71 @@
 #include <unistd.h>
 #include <sqlite3.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <sys/msg.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <arpa/inet.h>
+
+#define HANDLE
 
 #include "server.h"
 
-#define UNKNOWN		0
-#define PROVIDER	1
-#define CONSUMER	2
-
 struct {
-	int client_type;
+	enum client_type type;
 	sqlite3 * db;
 	sqlite3_stmt * add_stmt, * del_stmt, * list_stmt, * clear_stmt;
+	struct {
+		struct {
+			char name[ARRLEN(FIFO_PREFIX"to.")+64/4+1];
+			int fd;
+		} to;
+		struct {
+			char name[ARRLEN(FIFO_PREFIX"to.")+64/4+1];
+			int fd;
+		} from;
+	} pipe;
 	union {
 		char buf[PACKET_SIZE_MAX];
 		pk_keepalive_t pk;
 		pk_advertize_t ad;
+		pk_forward_t fw;
 	} recv;
 } stt_handle;
 
 int server_handle() {
 	int retv = 0;
 	
-	retv = server_handler_init();
+	retv = server_h_init();
 	if (retv)
 		goto _return;
 	
-	for (retv = 0; !retv; retv = server_packet());
+	for (int rpk = 0, rpi = 0; !rpk && !rpi;) {
+		rpk = server_h_packet();
+		if (rpk && rpk != SEC_NO_DATA)
+			retv = rpk;
+		
+		rpi = server_h_fifo();
+		if (rpi && rpi != SEC_NO_DATA)
+			retv = rpi;
+		
+		if (rpk == SEC_NO_DATA && rpi == SEC_NO_DATA)
+			_sleep(1);
+	}
 	
-	server_con_cleanup();
+	server_h_cleanup();
 	
 _return:
 	return retv;
 }
 
-int server_handler_init() {
-	int retv;
+int server_h_init() {
+	int retv, len;
+	struct {
+		long mtype;
+		pk_miscdata_t pk;
+	} * msg;
 	
 	close(stt_listen.sockfd);
 	
@@ -55,6 +85,56 @@ int server_handler_init() {
 	if (retv < 0) {
 		fprintf(stderr, "Bad handshake\n");
 		retv = SEC_HANDSHAKE;
+		goto _return;
+	}
+	
+	len = sizeof(long) + sizeof(pk_miscdata_t) + stt_listen.addrlen;
+	msg = calloc(1, len);
+	if (!msg) {
+		perror("calloc");
+		retv = SEC_PK_MALLOC;
+		goto _return;
+	}
+	
+	msg->mtype = SQMT_EST_PIPE;
+	init_pk_miscdata(&msg->pk, (const char *)&stt_listen.addr, stt_listen.addrlen);
+	
+	retv = msgsnd(stt_main.queue_id, msg, len, 0);
+	if (retv < 0) {
+		perror("msgsnd");
+		retv = SEC_MSGSND;
+		goto _free;
+	}
+	
+	snprintf(stt_handle.pipe.to.name, sizeof(stt_handle.pipe.to.name), FIFO_PREFIX"to.%llux", get_sock_addr_hash((struct sockaddr *)&msg->pk.miscdata.data));
+	
+	retv = mkfifo(stt_handle.pipe.to.name, 0666);
+	if (retv < 0) {
+		perror("mkfifo");
+		retv = SEC_MKFIFO;
+		goto _return;
+	}
+	
+	stt_handle.pipe.to.fd = open(stt_handle.pipe.to.name, O_RDONLY | O_NONBLOCK);
+	if (stt_handle.pipe.to.fd < 0) {
+		perror("open");
+		retv = SEC_OPEN;
+		goto _return;
+	}
+	
+	snprintf(stt_handle.pipe.from.name, sizeof(stt_handle.pipe.from.name), FIFO_PREFIX"to.%llux", get_sock_addr_hash((struct sockaddr *)&msg->pk.miscdata.data));
+	
+	retv = mkfifo(stt_handle.pipe.from.name, 0666);
+	if (retv < 0) {
+		perror("mkfifo");
+		retv = SEC_MKFIFO;
+		goto _return;
+	}
+	
+	stt_handle.pipe.from.fd = open(stt_handle.pipe.from.name, O_WRONLY);
+	if (stt_handle.pipe.from.fd < 0) {
+		perror("open");
+		retv = SEC_OPEN;
 		goto _return;
 	}
 	
@@ -68,13 +148,49 @@ int server_handler_init() {
 		retv = SEC_DB_OPEN;
 	}
 	
+_free:
+	free(msg);
 _return:
 	return retv;
 }
 
-int server_packet() {
+int server_h_fifo() {
 	int retv;
+	
+	retv = (int)pk_recv(stt_handle.pipe.to.fd, (char *)&stt_handle.recv.buf, (int)cfg.timeout, 0);
+	if (retv < 0) {
+		retv = (retv == -PK_RECV_ERROR && errno == EAGAIN) ? SEC_NO_DATA : SEC_PK_RECV;
+		goto _return;
+	}
+	
+	retv = server_h_f_forward();
+	
+_return:
+	return retv;
+}
+
+int server_h_f_forward() {
+	char s[INET6_ADDRSTRLEN];
+	
+	inet_ntop(stt_handle.recv.fw.address.family, &stt_handle.recv.fw.address.data, s, sizeof(s));
+	printf("Forward request from %s:%d\n", s, stt_handle.recv.fw.port);
+	
+	return 0;
+}
+
+int server_h_packet() {
+	int retv, to_read;
 	pk_keepalive_t * bad;
+	
+	retv = ioctl(stt_listen.acptfd, FIONREAD, &to_read);
+	if (retv) {
+		perror("ioctl");
+		retv = SEC_IOCTL;
+		goto _return;
+	} else if (to_read < sizeof(pk_keepalive_t)) {
+		retv = SEC_NO_DATA;
+		goto _return;
+	}
 	
 	retv = (int)pk_recv(stt_listen.acptfd, (char *)&stt_handle.recv.buf, (int)cfg.timeout, 0);
 	if (retv < 0) {
@@ -82,34 +198,34 @@ int server_packet() {
 		goto _return;
 	}
 	
-	retv = server_version();
+	retv = server_h_p_version();
 	if (retv)
 		goto _return;
 	
 	if (stt_handle.recv.pk.type == PK_KEEPALIVE) {
-		retv = server_keepalive();
+		retv = server_h_p_keepalive();
 		goto _return;
 	}
 	
-	if (stt_handle.client_type == UNKNOWN || stt_handle.client_type == PROVIDER)
+	if (stt_handle.type == UNKNOWN || stt_handle.type == PROVIDER)
 		if (stt_handle.recv.pk.type == PK_ADVERTIZE) {
-			retv = server_advertize();
+			retv = server_h_p_advertize();
 			goto _return;
 		}
 	
-	if (stt_handle.client_type == UNKNOWN || stt_handle.client_type == CONSUMER)
+	if (stt_handle.type == UNKNOWN || stt_handle.type == CONSUMER)
 		if (stt_handle.recv.pk.type == PK_REQUEST) {
-			retv = server_request();
+			retv = server_h_p_request();
 			goto _return;
 		}
 	
 	if (stt_handle.recv.pk.type == PK_FORWARD) {
-		retv = server_forward();
+		retv = server_h_p_forward();
 		goto _return;
 	}
 	
 	if (stt_handle.recv.pk.type == PK_EXITING) {
-		retv = server_exiting();
+		retv = server_h_p_exiting();
 		goto _return;
 	}
 	
@@ -130,7 +246,7 @@ _return:
 	return retv;
 }
 
-int server_version() {
+int server_h_p_version() {
 	int retv;
 	pk_type_t type;
 	pk_keepalive_t * bad;
@@ -175,22 +291,22 @@ _return:
 	return retv;
 }
 
-int server_keepalive() {
+int server_h_p_keepalive() {
 	return 0;
 }
 
-int server_advertize() {
+int server_h_p_advertize() {
 	int retv;
 	
-	if (stt_handle.client_type != PROVIDER) {
-		retv = server_ad_init();
+	if (stt_handle.type != PROVIDER) {
+		retv = server_h_p_ad_init();
 		if (retv)
 			goto _return;
 	}
 	
 	// if the name is length 1 and the only byte is -, remove the service
 	if (stt_handle.recv.ad.name.length == 1 && stt_handle.recv.ad.name.data[0] == '-') {
-		retv = server_remove();
+		retv = server_h_p_ad_remove();
 		goto _return;
 	}
 	
@@ -242,7 +358,7 @@ _eprint:
 	goto _return;
 }
 
-int server_remove() {
+int server_h_p_ad_remove() {
 	int retv;
 	
 	printf("Service no longer accessible on port %d of provider\n", stt_handle.recv.ad.port);
@@ -268,10 +384,10 @@ _eprint:
 	goto _return;
 }
 
-int server_ad_init() {
+int server_h_p_ad_init() {
 	int retv;
 	
-	stt_handle.client_type = PROVIDER;
+	stt_handle.type = PROVIDER;
 	
 	retv = sqlite3_prepare_v2(stt_handle.db, INSERT_STMT_STR, -1, &stt_handle.add_stmt,   NULL);
 	if (retv) {
@@ -289,17 +405,19 @@ int server_ad_init() {
 		goto _eprint;
 	}
 	
-	retv = sqlite3_bind_address(stt_handle.add_stmt,   4, (struct sockaddr *)&stt_listen.addr);
+	struct sockaddr * sa = (struct sockaddr *)&stt_listen.addr;
+	
+	retv = sqlite3_bind_blob(stt_handle.add_stmt, 4, &sa->sa_data, stt_listen.addrlen, SQLITE_TRANSIENT);
 	if (retv) {
 		retv = SEC_DB_BIND;
 		goto _eprint;
 	}
-	retv = sqlite3_bind_address(stt_handle.del_stmt,   2, (struct sockaddr *)&stt_listen.addr);
+	retv = sqlite3_bind_blob(stt_handle.del_stmt, 2, &sa->sa_data, stt_listen.addrlen, SQLITE_TRANSIENT);
 	if (retv) {
 		retv = SEC_DB_BIND;
 		goto _eprint;
 	}
-	retv = sqlite3_bind_address(stt_handle.clear_stmt, 1, (struct sockaddr *)&stt_listen.addr);
+	retv = sqlite3_bind_blob(stt_handle.clear_stmt, 1, &sa->sa_data, stt_listen.addrlen, SQLITE_TRANSIENT);
 	if (retv) {
 		retv = SEC_DB_BIND;
 		goto _eprint;
@@ -312,12 +430,12 @@ _eprint:
 	goto _return;
 }
 
-int server_request() {
+int server_h_p_request() {
 	int retv;
 	pk_service_t * serv;
 	
-	if (stt_handle.client_type != CONSUMER) {
-		retv = server_rq_init();
+	if (stt_handle.type != CONSUMER) {
+		retv = server_h_p_rq_init();
 		if (retv)
 			goto _return;
 	}
@@ -366,10 +484,10 @@ _return:
 	return retv;
 }
 
-int server_rq_init() {
+int server_h_p_rq_init() {
 	int retv;
 	
-	stt_handle.client_type = CONSUMER;
+	stt_handle.type = CONSUMER;
 	
 	retv = sqlite3_prepare_v2(stt_handle.db, SELECT_STMT_STR, -1, &stt_handle.list_stmt, NULL);
 	if (retv) {
@@ -384,17 +502,17 @@ _eprint:
 	goto _return;
 }
 
-int server_forward() {
+int server_h_p_forward() {
 	int retv;
 	
 	printf("Client requesting packet forwarding\n");
-	retv = SEC_UNKNOWN;
+	retv = (int)pk_send(stt_handle.pipe.from.fd, &stt_handle.recv.pk, 0);
 	
 //_return:
 	return retv;
 }
 
-int server_exiting() {
+int server_h_p_exiting() {
 	int retv;
 	
 	printf("Client/provider exiting\n");
@@ -404,12 +522,12 @@ int server_exiting() {
 	return retv;
 }
 
-void server_con_cleanup() {
-	if (stt_handle.client_type == PROVIDER) {
+int server_h_cleanup() {
+	if (stt_handle.type == PROVIDER) {
 		printf("Provider disconnected, removing services\n");
 		sqlite3_step(stt_handle.clear_stmt);
 		sqlite3_reset(stt_handle.clear_stmt);
-	} else if (stt_handle.client_type == CONSUMER) {
+	} else if (stt_handle.type == CONSUMER) {
 		printf("Client disconnected\n");
 	}
 	
@@ -418,4 +536,6 @@ void server_con_cleanup() {
 	sqlite3_finalize(stt_handle.del_stmt);
 	sqlite3_finalize(stt_handle.add_stmt);
 	sqlite3_close(stt_handle.db);
+	
+	return 0;
 }

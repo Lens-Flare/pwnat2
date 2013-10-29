@@ -8,41 +8,55 @@
 
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <string.h>
 
 #define MAIN
 
 #include "server.h"
 
 struct {
-	cfgint verbose, backlog, timeout;
+	cfgint help, verbose, backlog, timeout;
 	char * var_setup, * listen, * port, * dbname;
 } cfg;
 
 struct {
 	int argc;
 	const char ** argv;
+	pid_t pid;
+	key_t queue_key;
+	int queue_id;
 } stt_main;
 
 int main(int argc, const char * argv[]) {
 	int retv;
 	
-	retv = server_configure();
+	memset(&stt_main, 0, sizeof(stt_main));
+	
+	stt_main.argc = argc;
+	stt_main.argv = argv;
+	
+	stt_main.pid = getpid();
+	
+	retv = server_s_config();
 	if (retv) {
-		if (retv == SEC_OPTIONS)
+		if (retv == SEC_OPTIONS || retv == SEC_USAGE)
 			usage();
 		goto _return;
 	}
 	
-	char asdf[] = "/tmp/pwnat.db.XXXl";
-	cfg.dbname = asdf;
-	
-	retv = server_init_db();
-	if (retv == SEC_DB_MALLOC)
+	retv = server_s_ipc();
+	if (retv)
 		goto _return;
+	
+	retv = server_s_sqlite();
+	if (retv == SEC_DB_MALLOC)
+		goto _rmqueue;
 	else if (retv)
 		goto _unlink;
 	
-	retv = server_init_sig();
+	retv = server_s_sigaction();
 	if (retv)
 		goto _unlink;
 	
@@ -50,6 +64,8 @@ int main(int argc, const char * argv[]) {
 	
 _unlink:
 	unlink(cfg.dbname);
+_rmqueue:
+	msgctl(stt_main.queue_id, IPC_RMID, NULL);
 _return:
 	return retv;
 }

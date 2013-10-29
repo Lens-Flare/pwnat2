@@ -27,6 +27,7 @@
 		424057D4181A39200026989A /* setup.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057D3181A39200026989A /* setup.c */; };
 		424057D9181A3FC10026989A /* listen.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057D8181A3FC10026989A /* listen.c */; };
 		424057DB181A42720026989A /* handle.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057DA181A42720026989A /* handle.c */; };
+		424057DD181C2C180026989A /* forward.c in Sources */ = {isa = PBXBuildFile; fileRef = 424057DC181C2C180026989A /* forward.c */; };
 		4247B2A3181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A4181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
 		4247B2A5181761F600C1612D /* network.c in Sources */ = {isa = PBXBuildFile; fileRef = 4247B2A0181761F600C1612D /* network.c */; };
@@ -112,6 +113,8 @@
 		424057D5181A39380026989A /* server.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = server.h; sourceTree = "<group>"; };
 		424057D8181A3FC10026989A /* listen.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = listen.c; sourceTree = "<group>"; };
 		424057DA181A42720026989A /* handle.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = handle.c; sourceTree = "<group>"; };
+		424057DC181C2C180026989A /* forward.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = forward.c; sourceTree = "<group>"; };
+		424057DE181C34FA0026989A /* uthash.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = uthash.h; sourceTree = "<group>"; };
 		4247B2A0181761F600C1612D /* network.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = network.c; sourceTree = "<group>"; };
 		4247B2A2181761F600C1612D /* network.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = network.md; sourceTree = "<group>"; };
 		4247B2A61817633F00C1612D /* config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = config.c; sourceTree = "<group>"; };
@@ -190,6 +193,7 @@
 			isa = PBXGroup;
 			children = (
 				4291AF87181379EF003F8680 /* common.h */,
+				424057DE181C34FA0026989A /* uthash.h */,
 				4247B2A2181761F600C1612D /* network.md */,
 				4210EA101818887A00301FE9 /* rawnet.c */,
 				4247B2A0181761F600C1612D /* network.c */,
@@ -208,6 +212,7 @@
 				424057D3181A39200026989A /* setup.c */,
 				424057D8181A3FC10026989A /* listen.c */,
 				424057DA181A42720026989A /* handle.c */,
+				424057DC181C2C180026989A /* forward.c */,
 			);
 			path = server;
 			sourceTree = "<group>";
@@ -330,6 +335,7 @@
 				4247B2A3181761F600C1612D /* network.c in Sources */,
 				42B8EA45180F3CAA0032EA4B /* main.c in Sources */,
 				4291AF8918138C87003F8680 /* common.c in Sources */,
+				424057DD181C2C180026989A /* forward.c in Sources */,
 				424057D4181A39200026989A /* setup.c in Sources */,
 				424057D9181A3FC10026989A /* listen.c in Sources */,
 				424057DB181A42720026989A /* handle.c in Sources */,

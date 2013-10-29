@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
+#include <sys/msg.h>
 
 #define LISTEN
 
@@ -24,24 +26,38 @@ struct {
 int server_listen() {
 	int retv;
 	
+	memset(&stt_listen, 0, sizeof(stt_listen));
+	
+	stt_listen.addrlen = sizeof(stt_listen.addr);
+	
 	retv = listen_socket(cfg.listen, cfg.port, (int)cfg.backlog, &stt_listen.sockfd);
 	if (retv) {
 		retv = SEC_LISTEN;
         goto _return;
 	}
 	
-	retv = server_init_sig();
+	retv = server_s_sigaction();
 	if (retv)
 		goto _return;
 	
-	for (retv = 0; !retv; retv = server_accept());
+	for (retv = 0; !retv; retv = server_l_accept());
+	
+	if (stt_main.pid == getppid()) {
+		retv = msgctl(stt_main.queue_id, IPC_RMID, NULL);
+		if (retv < 0) {
+			perror("msgctl");
+			retv = SEC_MSGCTL;
+			goto _return;
+		}
+	}
 	
 _return:
 	return retv;
 }
 
-int server_accept() {
+int server_l_accept() {
 	int retv = 0;
+	pid_t cpid;
 	
 	stt_listen.acptfd = accept(stt_listen.sockfd, (struct sockaddr *)&stt_listen.addr, &stt_listen.addrlen);
 	if (stt_listen.acptfd < 0) {
@@ -50,7 +66,7 @@ int server_accept() {
 		goto _return;
 	}
 	
-	if (!fork())
+	if (!(cpid = fork()))
 		exit(server_handle());
 	
 	close(stt_listen.acptfd);
